@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -6,17 +6,15 @@ import {
     TouchableOpacity,
     useColorScheme,
     Image,
-    ScrollView
+    ScrollView,
+    BackHandler,
+    Alert
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 
-// 1. The Placeholder List
-// This mimics what your future logic will output.
-// Adding a new category here automatically draws it on the screen.
 const CATEGORY_LIST = [
     { id: 'random', name: 'Random', image: 'https://via.placeholder.com/60/808080/FFFFFF?text=?' },
     { id: 'mixed', name: 'All / Mixed', image: 'https://via.placeholder.com/60/808080/FFFFFF?text=All' },
-    // These match the resources you showed in your screenshot:
     { id: 'foods', name: 'Foods', image: 'https://via.placeholder.com/60/808080/FFFFFF?text=Food' },
     { id: 'movies', name: 'Movies', image: 'https://via.placeholder.com/60/808080/FFFFFF?text=Film' },
 ];
@@ -25,12 +23,41 @@ export default function CategoryScreen() {
     const router = useRouter();
     const isDarkMode = useColorScheme() === 'dark';
 
-    // 2. Dynamic Theming
+    // 1. State to track the currently selected category
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+
+    // 2. Intercept the hardware back button
+    useFocusEffect(
+        useCallback(() => {
+            const onBackPress = () => {
+                Alert.alert(
+                    'Quit App',
+                    'Are you sure you want to quit the app?',
+                    [
+                        { text: 'Cancel', style: 'cancel', onPress: () => {} },
+                        // If they press Yes, it force-closes the app natively
+                        { text: 'Yes', style: 'destructive', onPress: () => BackHandler.exitApp() },
+                    ]
+                );
+                return true; // This tells React Native we have handled the back button
+            };
+
+            const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+            return () => subscription.remove();
+        }, [])
+    );
+
+    // Dynamic Theming with new "Selected" colors added
     const themeColors = {
         background: isDarkMode ? '#121212' : '#F9FAFB',
         text: isDarkMode ? '#FFFFFF' : '#111827',
         cardBackground: isDarkMode ? '#1E1E1E' : '#FFFFFF',
         cardBorder: isDarkMode ? '#333333' : '#E5E7EB',
+
+        // New Highlight Colors
+        selectedBackground: isDarkMode ? '#1A365D' : '#EFF6FF',
+        selectedBorder: isDarkMode ? '#3B82F6' : '#2563EB',
+
         buttonBackground: isDarkMode ? '#3B82F6' : '#2563EB',
         buttonText: '#FFFFFF',
     };
@@ -42,38 +69,52 @@ export default function CategoryScreen() {
                 Select Category
             </Text>
 
-            {/* 3. The Scrollable List */}
-            {/* ScrollView ensures that if you add 20 categories, the user can scroll through them */}
             <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
+                {CATEGORY_LIST.map((category) => {
+                    // Check if this specific card is the one the user tapped
+                    const isSelected = selectedCategoryId === category.id;
 
-                {/* This loops over the CATEGORY_LIST and stamps out a visual card for each item */}
-                {CATEGORY_LIST.map((category) => (
-                    <TouchableOpacity
-                        key={category.id}
-                        style={[
-                            styles.categoryCard,
-                            {
-                                backgroundColor: themeColors.cardBackground,
-                                borderColor: themeColors.cardBorder,
-                            }
-                        ]}
-                        activeOpacity={0.7}
-                    >
-                        <Image source={{ uri: category.image }} style={styles.categoryImage} />
-                        <Text style={[styles.categoryName, { color: themeColors.text }]}>
-                            {category.name}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
+                    return (
+                        <TouchableOpacity
+                            key={category.id}
+                            onPress={() => setSelectedCategoryId(category.id)}
+                            style={[
+                                styles.categoryCard,
+                                {
+                                    backgroundColor: isSelected ? themeColors.selectedBackground : themeColors.cardBackground,
+                                    borderColor: isSelected ? themeColors.selectedBorder : themeColors.cardBorder,
+                                    // Make the selected card physically pop out
+                                    transform: [{ scale: isSelected ? 1.03 : 1 }],
+                                    borderWidth: isSelected ? 2 : 1,
+                                }
+                            ]}
+                            activeOpacity={0.7}
+                        >
+                            <Image source={{ uri: category.image }} style={styles.categoryImage} />
+                            <Text style={[styles.categoryName, { color: themeColors.text }]}>
+                                {category.name}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
             </ScrollView>
 
-            {/* 4. The Bottom Button */}
+            {/* Bottom Button */}
             <TouchableOpacity
-                style={[styles.chooseButton, { backgroundColor: themeColors.buttonBackground }]}
-                // Hard-coded navigation routing to the setup screen for now
+                style={[
+                    styles.chooseButton,
+                    { backgroundColor: themeColors.buttonBackground },
+                    // If no category is selected, apply the disabled style
+                    !selectedCategoryId && styles.disabledButton
+                ]}
+                disabled={!selectedCategoryId}
                 onPress={() => router.push("/screens/PlayerSetupScreen")}
             >
-                <Text style={[styles.chooseButtonText, { color: themeColors.buttonText }]}>
+                <Text style={[
+                    styles.chooseButtonText,
+                    { color: themeColors.buttonText },
+                    !selectedCategoryId && styles.disabledButtonText
+                ]}>
                     Choose Category
                 </Text>
             </TouchableOpacity>
@@ -85,9 +126,9 @@ export default function CategoryScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingTop: 64, // Pushes content down so it doesn't hit the phone notch
+        paddingTop: 64,
         paddingHorizontal: 24,
-        paddingBottom: 32, // Padding for the bottom button
+        paddingBottom: 32,
     },
     title: {
         fontSize: 32,
@@ -96,17 +137,15 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
     listContainer: {
-        flex: 1, // Tells the list to take up all available space in the middle
+        flex: 1,
         marginBottom: 24,
     },
     categoryCard: {
-        flexDirection: 'row', // CRITICAL: This is what makes the box a "horizontal rectangle"
-        alignItems: 'center', // Centers the text vertically with the image
+        flexDirection: 'row',
+        alignItems: 'center',
         padding: 12,
         marginBottom: 16,
         borderRadius: 16,
-        borderWidth: 1,
-        // Optional subtle drop shadow for a professional feel
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -117,7 +156,7 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 12,
-        marginRight: 16, // Puts space between the image and the text
+        marginRight: 16,
     },
     categoryName: {
         fontSize: 20,
@@ -125,8 +164,8 @@ const styles = StyleSheet.create({
     },
     chooseButton: {
         paddingVertical: 16,
-        borderRadius: 999, // Pill shape
-        alignItems: 'center', // Centers text horizontally in the button
+        borderRadius: 999,
+        alignItems: 'center',
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
@@ -139,4 +178,13 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         letterSpacing: 0.5,
     },
+    // New Disabled Styles
+    disabledButton: {
+        backgroundColor: '#A1A1AA', // A neutral gray
+        shadowOpacity: 0, // Flatten it so it doesn't look clickable
+        elevation: 0,
+    },
+    disabledButtonText: {
+        color: '#E4E4E7', // Dimmed text color
+    }
 });
