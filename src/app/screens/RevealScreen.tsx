@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Alert, useColorScheme, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 
@@ -6,7 +6,13 @@ export default function RevealScreen() {
     const router = useRouter();
     const navigation = useNavigation();
 
-    // Catch the name passed from the previous screen
+    // 1. State to control the suspense
+    const [isRevealed, setIsRevealed] = useState(false);
+
+    // 2. A silent flag to let the green button bypass the back-button alert
+    const isManualExit = useRef(false);
+
+    // Catch the name passed from the Turn Screen
     const { imposterName } = useLocalSearchParams();
 
     // Theme setup
@@ -15,16 +21,20 @@ export default function RevealScreen() {
     const textColor = isDark ? '#fff' : '#000';
     const bgColor = isDark ? '#121212' : '#f5f5f5';
 
-    // The Back Button Intercept
+    // --- INTERCEPT BACK BUTTON ---
     useEffect(() => {
         const unsubscribe = navigation.addListener('beforeRemove', (e) => {
-            // Stop the default back action
+            // If the user pressed the green button, let them pass without the alert
+            if (isManualExit.current) {
+                return;
+            }
+
+            // Otherwise, stop the default back action (swipes or hardware button)
             e.preventDefault();
 
-            // Fire the security popup
             Alert.alert(
-                'Return to Main Menu?',
-                'Are you sure you want to leave this game and return to the main menu?',
+                'End Game?',
+                'Are you sure you want to end this game and choose a new category?',
                 [
                     {
                         text: 'No',
@@ -35,10 +45,10 @@ export default function RevealScreen() {
                         text: 'Yes',
                         style: 'destructive',
                         onPress: () => {
-                            // If they say yes, remove the listener so we don't get trapped,
-                            // then send them straight to the Title Screen.
-                            navigation.removeListener('beforeRemove', unsubscribe);
-                            router.replace('/');
+                            // Flip the flag so we don't trigger this alert again in a loop
+                            isManualExit.current = true;
+                            // Route them to Category Selection
+                            router.replace('/screens/CategoryScreen');
                         },
                     },
                 ]
@@ -48,26 +58,53 @@ export default function RevealScreen() {
         return unsubscribe;
     }, [navigation, router]);
 
+    // Green Button action
+    const handleFinishGame = () => {
+        isManualExit.current = true;
+        router.replace('/screens/CategoryScreen');
+    };
+
     return (
         <View style={[styles.container, { backgroundColor: bgColor }]}>
-            <View style={styles.content}>
-                <Text style={[styles.drumrollText, { color: textColor }]}>
-                    The Impasta was...
-                </Text>
 
-                {/* Fallback to 'Unknown' just in case the data doesn't pass correctly while testing */}
-                <Text style={[styles.imposterName, { color: textColor }]}>
-                    {imposterName || 'Unknown'}
-                </Text>
+            <View style={styles.content}>
+                {!isRevealed ? (
+                    // PHASE 1: The Suspense
+                    <>
+                        <Text style={[styles.drumrollText, { color: textColor, marginBottom: 40 }]}>
+                            Moment of Truth...
+                        </Text>
+                        <TouchableOpacity
+                            style={styles.revealImposterButton}
+                            onPress={() => setIsRevealed(true)}
+                        >
+                            <Text style={styles.buttonText}>Reveal Imposter</Text>
+                        </TouchableOpacity>
+                    </>
+                ) : (
+                    // PHASE 2: The Reveal (Your awesome UI)
+                    <>
+                        <Text style={[styles.drumrollText, { color: textColor }]}>
+                            The Impasta was...
+                        </Text>
+
+                        <Text style={[styles.imposterName, { color: textColor }]}>
+                            {imposterName || 'Unknown'}
+                        </Text>
+                    </>
+                )}
             </View>
 
-            {/* A button to trigger the back action manually */}
-            <TouchableOpacity
-                style={styles.mainMenuButton}
-                onPress={() => router.back()}
-            >
-                <Text style={styles.buttonText}>Finish Game</Text>
-            </TouchableOpacity>
+            {/* The green button only appears AFTER the reveal to prevent accidental early exits */}
+            {isRevealed && (
+                <TouchableOpacity
+                    style={styles.mainMenuButton}
+                    onPress={handleFinishGame}
+                >
+                    <Text style={styles.buttonText}>Choose New Category</Text>
+                </TouchableOpacity>
+            )}
+
         </View>
     );
 }
@@ -95,6 +132,18 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         textAlign: 'center',
         color: '#ff4444',
+    },
+    revealImposterButton: {
+        backgroundColor: '#ff4444', // Danger red for the big reveal
+        paddingVertical: 24,
+        paddingHorizontal: 40,
+        borderRadius: 16,
+        alignItems: 'center',
+        shadowColor: "#ff4444",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 10,
+        elevation: 8,
     },
     mainMenuButton: {
         backgroundColor: '#4CAF50',

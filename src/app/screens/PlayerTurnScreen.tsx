@@ -122,13 +122,20 @@ export default function PlayerTurnScreen() {
         }
     };
 
-    // 4. Moving to the Next Player
+    // 4. Moving to the Next Player & Passing Data Forward
     const handleNextPlayer = () => {
         if (currentPlayerIdx < gameBackend.numPlayers - 1) {
             setCurrentPlayerIdx(currentPlayerIdx + 1);
             setScratchedTiles(new Set());
         } else {
-            router.push('/screens/RevealScreen');
+            // We use the method you built in your PlayerList class to get the name
+            const imposter = gameBackend.getImposter();
+
+            // We bundle it into the router's params object and send it to RevealScreen
+            router.push({
+                pathname: '/screens/RevealScreen',
+                params: { imposterName: imposter }
+            });
         }
     };
 
