@@ -33,7 +33,7 @@ export default function PlayerSetupScreen() {
     const [errorMessage, setErrorMessage] = useState('');
     const [isPhaseTwo, setIsPhaseTwo] = useState(false);
 
-    // --- INTERCEPT BACK BUTTON (Using your CategoryScreen logic!) ---
+    // --- INTERCEPT BACK BUTTON ---
     useFocusEffect(
         useCallback(() => {
             const onBackPress = () => {
@@ -41,13 +41,11 @@ export default function PlayerSetupScreen() {
                     'Discard Changes?',
                     'Are you sure you want to discard any changes?',
                     [
-                        // Do nothing if they hit cancel (it stays on the screen)
                         { text: 'Cancel', style: 'cancel', onPress: () => {} },
-                        // Only trigger the back action if they explicitly hit "Yes"
                         { text: 'Yes', style: 'destructive', onPress: () => router.back() },
                     ]
                 );
-                return true; // CRITICAL: This tells the phone to stop the default back action
+                return true;
             };
 
             const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
@@ -114,9 +112,20 @@ export default function PlayerSetupScreen() {
         ));
     };
 
-    // --- START GAME ROUTING ---
+    // --- START GAME ROUTING & HANDOFF ---
     const handleStartGame = () => {
-        router.push("/screens/PlayerTurnScreen");
+        // 1. Extract just the raw string names.
+        // We add a fallback just in case a user left a box blank so the game doesn't crash.
+        const rawNames = players.map(p => p.name.trim() !== '' ? p.name.trim() : 'Unnamed Player');
+
+        // 2. Push to the Turn Screen, stringifying the array so the router accepts it safely
+        router.push({
+            pathname: "/screens/PlayerTurnScreen",
+            params: {
+                categoryName: displayCategory,
+                playerNamesParam: JSON.stringify(rawNames)
+            }
+        });
     };
 
     // --- THEME COLORS ---
