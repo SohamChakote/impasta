@@ -1,39 +1,51 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
     View,
     Text,
     TextInput,
     TouchableOpacity,
     StyleSheet,
-    ScrollView,
-    useColorScheme,
     BackHandler,
-    Alert
+    Alert,
+    Animated,
+    Platform
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
 
 const MIN_PLAYERS = 3;
 const MAX_PLAYERS = 10;
 
+type Player = {
+    id: string;
+    name: string;
+};
+
 export default function PlayerSetupScreen() {
     const router = useRouter();
-    const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
-
     const { categoryName } = useLocalSearchParams<{ categoryName?: string }>();
     const displayCategory = categoryName || "Selected Category";
 
-    const [players, setPlayers] = useState([
+    // Entrance Animation
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    useEffect(() => {
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 350,
+            useNativeDriver: true,
+        }).start();
+    }, [fadeAnim]);
+
+    // State Management
+    const [players, setPlayers] = useState<Player[]>([
         { id: '1', name: '' },
         { id: '2', name: '' },
         { id: '3', name: '' }
     ]);
+    const [numInput, setNumInput] = useState(MIN_PLAYERS.toString());
 
-    const [inputValue, setInputValue] = useState(MIN_PLAYERS.toString());
-    const [errorMessage, setErrorMessage] = useState('');
-    const [isPhaseTwo, setIsPhaseTwo] = useState(false);
-
-    // --- INTERCEPT BACK BUTTON ---
+    // Intercept Back Button
     useFocusEffect(
         useCallback(() => {
             const onBackPress = () => {
@@ -47,190 +59,182 @@ export default function PlayerSetupScreen() {
                 );
                 return true;
             };
-
             const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
             return () => subscription.remove();
         }, [router])
     );
 
-    // --- PHASE 1 LOGIC: Validate and Transition ---
-    const handleConfirmNumber = () => {
-        const newCount = parseInt(inputValue, 10);
-
-        if (isNaN(newCount)) {
-            setErrorMessage('Please enter a valid number.');
-            return;
-        }
-        if (newCount < MIN_PLAYERS) {
-            setErrorMessage(`You need at least ${MIN_PLAYERS} players to play.`);
-            return;
-        }
-        if (newCount > MAX_PLAYERS) {
-            setErrorMessage(`Maximum of ${MAX_PLAYERS} players allowed for now.`);
-            return;
-        }
-
-        setErrorMessage('');
-        const currentCount = players.length;
-
-        if (newCount > currentCount) {
-            const additionalPlayers = [];
-            for (let i = 0; i < newCount - currentCount; i++) {
-                additionalPlayers.push({ id: Math.random().toString(), name: '' });
+    // Player Count Logic
+    const updatePlayerArray = (newCount: number) => {
+        setPlayers(prev => {
+            if (newCount > prev.length) {
+                const added = Array.from({ length: newCount - prev.length }, () => ({ id: Math.random().toString(), name: '' }));
+                return [...prev, ...added];
+            } else if (newCount < prev.length) {
+                return prev.slice(0, newCount);
             }
-            setPlayers([...players, ...additionalPlayers]);
-        } else if (newCount < currentCount) {
-            setPlayers(players.slice(0, newCount));
-        }
-
-        setIsPhaseTwo(true);
-    };
-
-    // --- PHASE 2 LOGIC: Go back to edit ---
-    const handleEditNumber = () => {
-        setIsPhaseTwo(false);
-    };
-
-    // --- LIST LOGIC (Only active in Phase 2) ---
-    const addPlayer = () => {
-        if (players.length >= MAX_PLAYERS) return;
-        const newPlayers = [...players, { id: Math.random().toString(), name: '' }];
-        setPlayers(newPlayers);
-        setInputValue(newPlayers.length.toString());
-    };
-
-    const removePlayer = (idToRemove: string) => {
-        if (players.length <= MIN_PLAYERS) return;
-        const newPlayers = players.filter(player => player.id !== idToRemove);
-        setPlayers(newPlayers);
-        setInputValue(newPlayers.length.toString());
-    };
-
-    const updatePlayerName = (id: string, newName: string) => {
-        setPlayers(players.map(player =>
-            player.id === id ? { ...player, name: newName } : player
-        ));
-    };
-
-    // --- START GAME ROUTING & HANDOFF ---
-    const handleStartGame = () => {
-        // 1. Extract just the raw string names.
-        // We add a fallback just in case a user left a box blank so the game doesn't crash.
-        const rawNames = players.map(p => p.name.trim() !== '' ? p.name.trim() : 'Unnamed Player');
-
-        // 2. Push to the Turn Screen, stringifying the array so the router accepts it safely
-        router.push({
-            pathname: "/screens/PlayerTurnScreen",
-            params: {
-                categoryName: displayCategory,
-                playerNamesParam: JSON.stringify(rawNames)
-            }
+            return prev;
         });
     };
 
-    // --- THEME COLORS ---
+    const handleCountValidation = (targetCount: number) => {
+        if (isNaN(targetCount)) {
+            setNumInput(players.length.toString());
+            return;
+        }
+        if (targetCount < MIN_PLAYERS) {
+            Alert.alert('Hold up!', `You need at least ${MIN_PLAYERS} players to play.`);
+            setNumInput(MIN_PLAYERS.toString());
+            updatePlayerArray(MIN_PLAYERS);
+            return;
+        }
+        if (targetCount > MAX_PLAYERS) {
+            Alert.alert('Hold up!', `Maximum of ${MAX_PLAYERS} players allowed for now.`);
+            setNumInput(MAX_PLAYERS.toString());
+            updatePlayerArray(MAX_PLAYERS);
+            return;
+        }
+        setNumInput(targetCount.toString());
+        updatePlayerArray(targetCount);
+    };
+
+    const onSubmitNumInput = () => handleCountValidation(parseInt(numInput, 10));
+    const decrementPlayers = () => handleCountValidation(players.length - 1);
+    const incrementPlayers = () => handleCountValidation(players.length + 1);
+
+    // List Logic
+    const removePlayer = (idToRemove: string) => {
+        if (players.length <= MIN_PLAYERS) {
+            Alert.alert('Hold up!', `You need at least ${MIN_PLAYERS} players.`);
+            return;
+        }
+        const newPlayers = players.filter(p => p.id !== idToRemove);
+        setPlayers(newPlayers);
+        setNumInput(newPlayers.length.toString());
+    };
+
+    const updatePlayerName = (id: string, newName: string) => {
+        setPlayers(players.map(p => p.id === id ? { ...p, name: newName } : p));
+    };
+
+    const handleStartGame = () => {
+        const rawNames = players.map(p => p.name.trim() !== '' ? p.name.trim() : 'Unnamed Player');
+        router.push({
+            pathname: "/screens/PlayerTurnScreen",
+            params: { categoryName: displayCategory, playerNamesParam: JSON.stringify(rawNames) }
+        });
+    };
+
+    // Figma Palette
     const themeColors = {
-        background: isDark ? '#121212' : '#F9FAFB',
-        text: isDark ? '#FFFFFF' : '#111827',
-        inputBackground: isDark ? '#1E1E1E' : '#E5E7EB',
-        subText: isDark ? '#9CA3AF' : '#6B7280',
-        primaryButton: isDark ? '#3B82F6' : '#2563EB',
+        background: '#F6FFDC',
+        text: '#1E293B',
+        subText: '#64748B',
+        inputBackground: '#CFECF3',
+        primaryButton: '#F9B2D7',
+        addButton: '#DAF9DE',
+    };
+
+    // Render Draggable Row
+    const renderItem = ({ item, drag, isActive }: RenderItemParams<Player>) => {
+        return (
+            <ScaleDecorator>
+                <View style={[styles.row, isActive && { opacity: 0.7, transform: [{ scale: 1.02 }] }]}>
+
+                    {/* Drag Handle (Hamburger Icon) */}
+                    <TouchableOpacity
+                        onPressIn={drag}
+                        style={styles.dragHandleContainer}
+                        activeOpacity={0.5}
+                    >
+                        <Text style={[styles.dragHandleText, { color: themeColors.text }]}>≡</Text>
+                    </TouchableOpacity>
+
+                    {/* Blue Name Form */}
+                    <TextInput
+                        style={[styles.nameInput, { backgroundColor: themeColors.inputBackground, color: themeColors.text }]}
+                        placeholder="Enter Name"
+                        placeholderTextColor={themeColors.subText}
+                        value={item.name}
+                        onChangeText={(text) => updatePlayerName(item.id, text)}
+                    />
+
+                    {/* Slate 'X' Outside the Box */}
+                    <TouchableOpacity onPress={() => removePlayer(item.id)} style={styles.removeButton}>
+                        <Text style={[styles.removeText, { color: themeColors.text }]}>X</Text>
+                    </TouchableOpacity>
+                </View>
+            </ScaleDecorator>
+        );
     };
 
     return (
-        <View style={[styles.mainContainer, { backgroundColor: themeColors.background }]}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <Animated.View style={[styles.mainContainer, { backgroundColor: themeColors.background, opacity: fadeAnim }]}>
 
-            {/* Top Category Header */}
-            <View style={styles.categoryHeader}>
-                <Text style={[styles.categoryLabel, { color: themeColors.subText }]}>PLAYING CATEGORY</Text>
-                <Text style={[styles.categoryTitle, { color: themeColors.text }]}>{displayCategory}</Text>
-            </View>
-
-            {/* PHASE 1: Centered Number Selection */}
-            {!isPhaseTwo && (
-                <View style={styles.phaseOneContainer}>
-                    <Text style={[styles.label, { color: themeColors.text, marginBottom: 15 }]}>
-                        Number of Players ({MIN_PLAYERS}-{MAX_PLAYERS}):
-                    </Text>
-
-                    <View style={styles.inputRow}>
-                        <TextInput
-                            style={[styles.largeNumberInput, { backgroundColor: themeColors.inputBackground, color: themeColors.text }]}
-                            keyboardType="numeric"
-                            value={inputValue}
-                            onChangeText={setInputValue}
-                            maxLength={2}
-                            autoFocus={true}
-                        />
-                        <TouchableOpacity style={styles.checkButton} onPress={handleConfirmNumber}>
-                            <Text style={styles.checkText}>✓</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {errorMessage !== '' && (
-                        <Text style={styles.errorText}>{errorMessage}</Text>
-                    )}
+                {/* Top Category Header */}
+                <View style={[styles.categoryHeader, { borderBottomColor: themeColors.text }]}>
+                    <Text style={[styles.categoryLabel, { color: themeColors.subText }]}>PLAYING CATEGORY</Text>
+                    <Text style={[styles.categoryTitle, { color: themeColors.text }]}>{displayCategory}</Text>
                 </View>
-            )}
 
-            {/* PHASE 2: Top Header & Player List */}
-            {isPhaseTwo && (
-                <>
-                    <View style={styles.topHeader}>
-                        <Text style={[styles.label, { color: themeColors.text }]}>Number of Players:</Text>
-                        <TouchableOpacity onPress={handleEditNumber}>
-                            <View style={[styles.smallNumberDisplay, { backgroundColor: themeColors.inputBackground }]}>
-                                <Text style={[styles.smallNumberText, { color: themeColors.text }]}>
-                                    {players.length}
-                                </Text>
-                            </View>
-                        </TouchableOpacity>
+                {/* Interactive Player Count Row */}
+                <View style={styles.countControlRow}>
+                    <Text style={[styles.label, { color: themeColors.text }]}>Number of Players:</Text>
+
+                    <View style={styles.htmlSpinnerContainer}>
+                        <TextInput
+                            style={[styles.numberInput, { backgroundColor: themeColors.inputBackground, color: themeColors.text }]}
+                            keyboardType="numeric"
+                            value={numInput}
+                            onChangeText={setNumInput}
+                            onEndEditing={onSubmitNumInput}
+                            maxLength={2}
+                        />
+                        <View style={styles.spinnerArrows}>
+                            <TouchableOpacity onPress={incrementPlayers} style={styles.spinnerBtn}>
+                                <Text style={[styles.spinnerBtnText, { color: themeColors.text }]}>^</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={decrementPlayers} style={styles.spinnerBtn}>
+                                <Text style={[styles.spinnerBtnText, { color: themeColors.text, transform: [{ rotate: '180deg' }] }]}>^</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
+                </View>
 
-                    <ScrollView style={styles.listContainer} contentContainerStyle={{ paddingBottom: 50 }} showsVerticalScrollIndicator={false}>
-                        {players.map((player) => (
-                            <View key={player.id} style={styles.row}>
-                                <Text style={[styles.dragHandle, { color: themeColors.text }]}>=</Text>
+                {/* Draggable Player List */}
+                <View style={styles.listContainer}>
+                    <DraggableFlatList
+                        data={players}
+                        onDragEnd={({ data }) => setPlayers(data)}
+                        keyExtractor={(item) => item.id}
+                        renderItem={renderItem}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ paddingBottom: 20 }}
+                        ListFooterComponent={
+                            <TouchableOpacity
+                                style={[styles.addButton, { backgroundColor: themeColors.addButton }]}
+                                onPress={incrementPlayers}
+                            >
+                                <Text style={[styles.addText, { color: themeColors.text }]}>+</Text>
+                            </TouchableOpacity>
+                        }
+                    />
+                </View>
 
-                                <TextInput
-                                    style={[styles.nameInput, { backgroundColor: themeColors.inputBackground, color: themeColors.text }]}
-                                    placeholder="Enter name"
-                                    placeholderTextColor={themeColors.subText}
-                                    value={player.name}
-                                    onChangeText={(text) => updatePlayerName(player.id, text)}
-                                />
+                {/* Pink Start Game Button */}
+                <View style={styles.bottomButtonContainer}>
+                    <TouchableOpacity
+                        style={[styles.startGameButton, { backgroundColor: themeColors.primaryButton }]}
+                        onPress={handleStartGame}
+                        activeOpacity={0.8}
+                    >
+                        <Text style={[styles.startGameText, { color: themeColors.text }]}>Start</Text>
+                    </TouchableOpacity>
+                </View>
 
-                                <TouchableOpacity
-                                    onPress={() => removePlayer(player.id)}
-                                    disabled={players.length <= MIN_PLAYERS}
-                                    style={[styles.removeButton, players.length <= MIN_PLAYERS && { opacity: 0.2 }]}
-                                >
-                                    <Text style={[styles.removeText, { color: themeColors.text }]}>X</Text>
-                                </TouchableOpacity>
-                            </View>
-                        ))}
-
-                        <TouchableOpacity
-                            style={[styles.addButton, players.length >= MAX_PLAYERS && { opacity: 0.5 }]}
-                            onPress={addPlayer}
-                            disabled={players.length >= MAX_PLAYERS}
-                        >
-                            <Text style={styles.addText}>+</Text>
-                        </TouchableOpacity>
-
-                        {/* START GAME BUTTON */}
-                        <TouchableOpacity
-                            style={[styles.startGameButton, { backgroundColor: themeColors.primaryButton }]}
-                            onPress={handleStartGame}
-                        >
-                            <Text style={styles.startGameText}>Start Game</Text>
-                        </TouchableOpacity>
-
-                    </ScrollView>
-                </>
-            )}
-
-        </View>
+            </Animated.View>
+        </GestureHandlerRootView>
     );
 }
 
@@ -238,150 +242,128 @@ const styles = StyleSheet.create({
     mainContainer: {
         flex: 1,
         paddingTop: 60,
+        paddingHorizontal: 24,
     },
     categoryHeader: {
         alignItems: 'center',
-        paddingBottom: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(150, 150, 150, 0.2)',
-        marginBottom: 20,
+        paddingBottom: 16,
+        borderBottomWidth: 2,
+        marginBottom: 32,
     },
     categoryLabel: {
         fontSize: 12,
-        fontWeight: 'bold',
         letterSpacing: 1.5,
         marginBottom: 4,
+        fontFamily: 'Iosevka-Charon-Medium',
     },
     categoryTitle: {
-        fontSize: 28,
-        fontWeight: '900',
-        textTransform: 'uppercase',
-    },
-    phaseOneContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-        marginTop: -80,
-    },
-    inputRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 15,
-    },
-    largeNumberInput: {
         fontSize: 32,
-        fontWeight: 'bold',
-        paddingHorizontal: 25,
-        paddingVertical: 15,
-        borderRadius: 12,
-        textAlign: 'center',
-        minWidth: 90,
+        fontFamily: 'Iosevka-Charon-Bold',
+        letterSpacing: 1,
     },
-    checkButton: {
-        backgroundColor: '#4CAF50',
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    checkText: {
-        color: 'white',
-        fontSize: 28,
-        fontWeight: 'bold',
-    },
-    errorText: {
-        color: '#ff4444',
-        fontSize: 16,
-        marginTop: 20,
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    topHeader: {
+    countControlRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingBottom: 20,
+        marginBottom: 32,
+        gap: 16,
     },
     label: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginRight: 10,
+        fontSize: 20,
+        fontFamily: 'Iosevka-Charon-Bold',
     },
-    smallNumberDisplay: {
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        borderRadius: 8,
-        minWidth: 50,
+    htmlSpinnerContainer: {
+        flexDirection: 'row',
         alignItems: 'center',
     },
-    smallNumberText: {
-        fontSize: 18,
-        fontWeight: 'bold',
+    numberInput: {
+        fontSize: 20,
+        fontFamily: 'Iosevka-Charon-Medium',
+        textAlign: 'center',
+        width: 48,
+        height: 48,
+        borderTopLeftRadius: 8,
+        borderBottomLeftRadius: 8,
+    },
+    spinnerArrows: {
+        height: 48,
+        justifyContent: 'center',
+        paddingLeft: 4,
+    },
+    spinnerBtn: {
+        paddingVertical: 2,
+        paddingHorizontal: 6,
+    },
+    spinnerBtnText: {
+        fontSize: 16,
+        fontFamily: 'Iosevka-Charon-Bold',
     },
     listContainer: {
         flex: 1,
-        paddingHorizontal: 20,
     },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 10,
-        marginBottom: 15,
+        marginBottom: 16,
     },
-    dragHandle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        paddingHorizontal: 5,
+    dragHandleContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 40,
+        height: 50,
+        marginRight: 4,
+    },
+    dragHandleText: {
+        fontSize: 32, // Large enough to look like the Figma hamburger
+        fontFamily: 'Iosevka-Charon-Medium',
+        lineHeight: 32,
+        marginTop: -4, // Optical vertical centering for the unicode symbol
     },
     nameInput: {
         flex: 1,
-        fontSize: 16,
-        paddingHorizontal: 15,
-        paddingVertical: 12,
+        height: 50,
+        fontSize: 18,
+        fontFamily: 'Iosevka-Charon-Medium',
+        paddingHorizontal: 16,
         borderRadius: 8,
     },
     removeButton: {
-        padding: 10,
+        paddingLeft: 16,
+        paddingRight: 8,
     },
     removeText: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: 'red',
+        fontSize: 22,
+        fontFamily: 'Iosevka-Charon-Bold',
     },
     addButton: {
         alignSelf: 'center',
-        backgroundColor: '#4CAF50',
-        width: 60,
-        height: 60,
-        borderRadius: 30,
+        width: 56,
+        height: 56,
+        borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 15,
-        marginBottom: 30,
+        marginTop: 16,
+        marginBottom: 20,
     },
     addText: {
-        fontSize: 30,
-        color: 'white',
-        fontWeight: 'bold',
+        fontSize: 32,
+        fontFamily: 'Iosevka-Charon-Bold',
+        lineHeight: 36,
+    },
+    bottomButtonContainer: {
+        paddingVertical: 20,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 30,
+        backgroundColor: 'transparent',
+        alignItems: 'center',
     },
     startGameButton: {
-        paddingVertical: 18,
-        borderRadius: 999,
+        width: 160,
+        paddingVertical: 16,
+        borderRadius: 16,
         alignItems: 'center',
-        marginHorizontal: 10,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 5,
     },
     startGameText: {
-        color: '#FFFFFF',
-        fontSize: 18,
-        fontWeight: '900',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
+        fontSize: 20,
+        fontFamily: 'Iosevka-Charon-Medium',
     }
 });
