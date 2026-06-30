@@ -5,7 +5,6 @@ import {
     StyleSheet,
     PanResponder,
     TouchableOpacity,
-    useColorScheme,
     Animated,
     BackHandler,
     Alert
@@ -20,8 +19,6 @@ const TILE_SIZE = CARD_SIZE / GRID_COLS;
 
 export default function PlayerTurnScreen() {
     const router = useRouter();
-    const colorScheme = useColorScheme();
-    const isDark = colorScheme === 'dark';
 
     // --- INTERCEPT BACK BUTTON ---
     useFocusEffect(
@@ -128,10 +125,7 @@ export default function PlayerTurnScreen() {
             setCurrentPlayerIdx(currentPlayerIdx + 1);
             setScratchedTiles(new Set());
         } else {
-            // We use the method you built in your PlayerList class to get the name
             const imposter = gameBackend.getImposter();
-
-            // We bundle it into the router's params object and send it to RevealScreen
             router.push({
                 pathname: '/screens/RevealScreen',
                 params: { imposterName: imposter }
@@ -139,14 +133,14 @@ export default function PlayerTurnScreen() {
         }
     };
 
-    // Theme Colors
+    // Theme Palette Configurations mapped strictly from your specifications
     const theme = {
-        background: isDark ? '#121212' : '#F9FAFB',
-        text: isDark ? '#FFFFFF' : '#111827',
-        subText: isDark ? '#9CA3AF' : '#6B7280',
-        cardHidden: isDark ? '#374151' : '#D1D5DB',
-        cardRevealed: isDark ? '#1F2937' : '#FFFFFF',
-        primaryButton: isDark ? '#3B82F6' : '#2563EB',
+        background: '#F6FFDC',      // Soft Pale Yellow background
+        text: '#1E293B',            // Dark Slate text color
+        subText: '#1E293B',         // Secondary structural labels
+        cardHidden: '#CFECF3',      // Darker / Unscratched color (Soft Teal/Blue)
+        cardRevealed: '#DAF9DE',    // Lighter / Revealed color (Soft Mint Green)
+        primaryButton: '#F9B2D7',   // Bubblegum Pink accent button
     };
 
     if (!activePlayer) return null;
@@ -160,9 +154,9 @@ export default function PlayerTurnScreen() {
 
             {/* Top Prompt Text */}
             <View style={styles.promptContainer}>
-                <Text style={[styles.smallText, { color: theme.subText }]}>If you are</Text>
+                <Text style={[styles.smallText, { color: theme.subText, opacity: 0.8 }]}>If you are</Text>
                 <Text style={[styles.largeText, { color: theme.text }]}>{activePlayer.name}</Text>
-                <Text style={[styles.smallText, { color: theme.subText }]}>then scratch the card:</Text>
+                <Text style={[styles.smallText, { color: theme.subText, opacity: 0.8 }]}>then scratch the card:</Text>
             </View>
 
             {/* The Scratch Card */}
@@ -171,7 +165,7 @@ export default function PlayerTurnScreen() {
                 <View style={styles.secretDataContainer}>
                     {activePlayer.isImposter ? (
                         <>
-                            <Text style={[styles.secretSmall, { color: theme.subText }]}>
+                            <Text style={[styles.secretSmall, { color: theme.subText, opacity: 0.7 }]}>
                                 You are the imposter. Your hint is:
                             </Text>
                             <Text style={[styles.secretLarge, { color: theme.text }]}>
@@ -180,7 +174,7 @@ export default function PlayerTurnScreen() {
                         </>
                     ) : (
                         <>
-                            <Text style={[styles.secretSmall, { color: theme.subText }]}>
+                            <Text style={[styles.secretSmall, { color: theme.subText, opacity: 0.7 }]}>
                                 The word is
                             </Text>
                             <Text style={[styles.secretLarge, { color: theme.text }]}>
@@ -204,7 +198,7 @@ export default function PlayerTurnScreen() {
                             ]}
                         />
                     ))}
-                    <Text style={[styles.scratchText, { opacity: isScratched ? 0 : 1 }]}>
+                    <Text style={[styles.scratchText, { color: theme.text, opacity: isScratched ? 0 : 0.6 }]}>
                         SCRATCH TO REVEAL
                     </Text>
                 </View>
@@ -213,14 +207,14 @@ export default function PlayerTurnScreen() {
             </View>
 
             {/* Pulsating Next Player Button */}
-            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+            <Animated.View style={currentPlayerIdx < gameBackend.numPlayers - 1 ? { transform: [{ scale: pulseAnim }] } : {}}>
                 <TouchableOpacity
                     style={[styles.nextButton, { backgroundColor: theme.primaryButton }]}
                     onPress={handleNextPlayer}
                 >
-                    <Text style={styles.nextButtonText}>
+                    <Text style={[styles.nextButtonText, { color: theme.text }]}>
                         {currentPlayerIdx < gameBackend.numPlayers - 1
-                            ? "Pass the phone to next player"
+                            ? `Pass the phone to ${gameBackend.players[currentPlayerIdx + 1].name}`
                             : "Proceed to Game"}
                     </Text>
                 </TouchableOpacity>
@@ -243,7 +237,7 @@ const styles = StyleSheet.create({
     },
     smallText: {
         fontSize: 18,
-        fontWeight: '500',
+        fontWeight: '600',
         marginBottom: 5,
         marginTop: 5,
     },
@@ -259,11 +253,11 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         overflow: 'hidden',
         position: 'relative',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.15,
-        shadowRadius: 15,
-        elevation: 8,
+        shadowColor: "#1E293B",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 4,
         marginBottom: 50,
     },
     secretDataContainer: {
@@ -292,14 +286,11 @@ const styles = StyleSheet.create({
     },
     scratchText: {
         position: 'absolute',
-        color: '#FFFFFF',
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '900',
-        letterSpacing: 2,
+        letterSpacing: 1.5,
         textTransform: 'uppercase',
-        textShadowColor: 'rgba(0,0,0,0.5)',
-        textShadowOffset: { width: 0, height: 2 },
-        textShadowRadius: 4,
+        textAlign: 'center',
     },
     touchOverlay: {
         ...StyleSheet.absoluteFill,
@@ -309,14 +300,13 @@ const styles = StyleSheet.create({
         paddingVertical: 18,
         paddingHorizontal: 30,
         borderRadius: 999,
-        shadowColor: "#000",
+        shadowColor: "#1E293B",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 5,
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 3,
     },
     nextButtonText: {
-        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: 'bold',
         textTransform: 'uppercase',
