@@ -5,29 +5,23 @@ import {
     TextInput,
     TouchableOpacity,
     StyleSheet,
+    ScrollView,
     BackHandler,
     Alert,
     Animated,
     Platform
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
 
 const MIN_PLAYERS = 3;
 const MAX_PLAYERS = 10;
-
-type Player = {
-    id: string;
-    name: string;
-};
 
 export default function PlayerSetupScreen() {
     const router = useRouter();
     const { categoryName } = useLocalSearchParams<{ categoryName?: string }>();
     const displayCategory = categoryName || "Selected Category";
 
-    // Entrance Animation
+    // 1. Entrance Animation
     const fadeAnim = useRef(new Animated.Value(0)).current;
     useEffect(() => {
         Animated.timing(fadeAnim, {
@@ -37,15 +31,15 @@ export default function PlayerSetupScreen() {
         }).start();
     }, [fadeAnim]);
 
-    // State Management
-    const [players, setPlayers] = useState<Player[]>([
+    // 2. State Management
+    const [players, setPlayers] = useState([
         { id: '1', name: '' },
         { id: '2', name: '' },
         { id: '3', name: '' }
     ]);
     const [numInput, setNumInput] = useState(MIN_PLAYERS.toString());
 
-    // Intercept Back Button
+    // 3. Hardware Back Interception
     useFocusEffect(
         useCallback(() => {
             const onBackPress = () => {
@@ -64,7 +58,7 @@ export default function PlayerSetupScreen() {
         }, [router])
     );
 
-    // Player Count Logic
+    // 4. Player Count Logic
     const updatePlayerArray = (newCount: number) => {
         setPlayers(prev => {
             if (newCount > prev.length) {
@@ -102,7 +96,7 @@ export default function PlayerSetupScreen() {
     const decrementPlayers = () => handleCountValidation(players.length - 1);
     const incrementPlayers = () => handleCountValidation(players.length + 1);
 
-    // List Logic
+    // List Handlers
     const removePlayer = (idToRemove: string) => {
         if (players.length <= MIN_PLAYERS) {
             Alert.alert('Hold up!', `You need at least ${MIN_PLAYERS} players.`);
@@ -125,116 +119,102 @@ export default function PlayerSetupScreen() {
         });
     };
 
-    // Figma Palette
+    // Hardcoded Figma Palette
     const themeColors = {
-        background: '#F6FFDC',
+        background: '#F6FFDC', // Light Mint/Yellow
         text: '#1E293B',
         subText: '#64748B',
-        inputBackground: '#CFECF3',
+        playerRowBg: '#CFECF3', // The specific blue you requested for the forms
         primaryButton: '#F9B2D7',
-        addButton: '#DAF9DE',
-    };
-
-    // Render Draggable Row
-    const renderItem = ({ item, drag, isActive }: RenderItemParams<Player>) => {
-        return (
-            <ScaleDecorator>
-                <View style={[styles.row, isActive && { opacity: 0.7, transform: [{ scale: 1.02 }] }]}>
-
-                    {/* Drag Handle (Hamburger Icon) */}
-                    <TouchableOpacity
-                        onPressIn={drag}
-                        style={styles.dragHandleContainer}
-                        activeOpacity={0.5}
-                    >
-                        <Text style={[styles.dragHandleText, { color: themeColors.text }]}>≡</Text>
-                    </TouchableOpacity>
-
-                    {/* Blue Name Form */}
-                    <TextInput
-                        style={[styles.nameInput, { backgroundColor: themeColors.inputBackground, color: themeColors.text }]}
-                        placeholder="Enter Name"
-                        placeholderTextColor={themeColors.subText}
-                        value={item.name}
-                        onChangeText={(text) => updatePlayerName(item.id, text)}
-                    />
-
-                    {/* Slate 'X' Outside the Box */}
-                    <TouchableOpacity onPress={() => removePlayer(item.id)} style={styles.removeButton}>
-                        <Text style={[styles.removeText, { color: themeColors.text }]}>X</Text>
-                    </TouchableOpacity>
-                </View>
-            </ScaleDecorator>
-        );
+        addButton: '#4ADE80',
+        removeText: '#1E293B', // Dark slate instead of red
     };
 
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <Animated.View style={[styles.mainContainer, { backgroundColor: themeColors.background, opacity: fadeAnim }]}>
+        <Animated.View style={[styles.mainContainer, { backgroundColor: themeColors.background, opacity: fadeAnim }]}>
 
-                {/* Top Category Header */}
-                <View style={[styles.categoryHeader, { borderBottomColor: themeColors.text }]}>
-                    <Text style={[styles.categoryLabel, { color: themeColors.subText }]}>PLAYING CATEGORY</Text>
-                    <Text style={[styles.categoryTitle, { color: themeColors.text }]}>{displayCategory}</Text>
-                </View>
+            {/* Top Category Header */}
+            <View style={[styles.categoryHeader, { borderBottomColor: themeColors.text }]}>
+                <Text style={[styles.categoryLabel, { color: themeColors.subText }]}>PLAYING CATEGORY</Text>
+                <Text style={[styles.categoryTitle, { color: themeColors.text }]}>{displayCategory}</Text>
+            </View>
 
-                {/* Interactive Player Count Row */}
-                <View style={styles.countControlRow}>
-                    <Text style={[styles.label, { color: themeColors.text }]}>Number of Players:</Text>
+            {/* Interactive Player Count Row (Now Centered & Closer) */}
+            <View style={styles.countControlRow}>
+                <Text style={[styles.label, { color: themeColors.text }]}>Number of Players:</Text>
 
-                    <View style={styles.htmlSpinnerContainer}>
-                        <TextInput
-                            style={[styles.numberInput, { backgroundColor: themeColors.inputBackground, color: themeColors.text }]}
-                            keyboardType="numeric"
-                            value={numInput}
-                            onChangeText={setNumInput}
-                            onEndEditing={onSubmitNumInput}
-                            maxLength={2}
-                        />
-                        <View style={styles.spinnerArrows}>
-                            <TouchableOpacity onPress={incrementPlayers} style={styles.spinnerBtn}>
-                                <Text style={[styles.spinnerBtnText, { color: themeColors.text }]}>^</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity onPress={decrementPlayers} style={styles.spinnerBtn}>
-                                <Text style={[styles.spinnerBtnText, { color: themeColors.text, transform: [{ rotate: '180deg' }] }]}>^</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
+                <View style={styles.numberSelector}>
+                    <TouchableOpacity onPress={decrementPlayers} style={styles.arrowButton}>
+                        <Text style={[styles.arrowText, { color: themeColors.text }]}>{"<"}</Text>
+                    </TouchableOpacity>
 
-                {/* Draggable Player List */}
-                <View style={styles.listContainer}>
-                    <DraggableFlatList
-                        data={players}
-                        onDragEnd={({ data }) => setPlayers(data)}
-                        keyExtractor={(item) => item.id}
-                        renderItem={renderItem}
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={{ paddingBottom: 20 }}
-                        ListFooterComponent={
-                            <TouchableOpacity
-                                style={[styles.addButton, { backgroundColor: themeColors.addButton }]}
-                                onPress={incrementPlayers}
-                            >
-                                <Text style={[styles.addText, { color: themeColors.text }]}>+</Text>
-                            </TouchableOpacity>
-                        }
+                    <TextInput
+                        style={[styles.numberInput, { color: themeColors.text }]}
+                        keyboardType="numeric"
+                        value={numInput}
+                        onChangeText={setNumInput}
+                        onEndEditing={onSubmitNumInput}
+                        maxLength={2}
                     />
-                </View>
 
-                {/* Pink Start Game Button */}
-                <View style={styles.bottomButtonContainer}>
-                    <TouchableOpacity
-                        style={[styles.startGameButton, { backgroundColor: themeColors.primaryButton }]}
-                        onPress={handleStartGame}
-                        activeOpacity={0.8}
-                    >
-                        <Text style={[styles.startGameText, { color: themeColors.text }]}>Start</Text>
+                    <TouchableOpacity onPress={incrementPlayers} style={styles.arrowButton}>
+                        <Text style={[styles.arrowText, { color: themeColors.text }]}>{">"}</Text>
                     </TouchableOpacity>
                 </View>
+            </View>
 
-            </Animated.View>
-        </GestureHandlerRootView>
+            {/* Scrollable Player List */}
+            <ScrollView
+                style={styles.listContainer}
+                showsVerticalScrollIndicator={false}
+            >
+                {players.map((player) => (
+                    <View key={player.id} style={styles.playerRowContainer}>
+                        {/* Hamburger outside the box */}
+                        <Text style={[styles.dragHandleOut, { color: themeColors.subText }]}>=</Text>
+
+                        {/* The actual name input box */}
+                        <View style={[styles.inputBox, { backgroundColor: themeColors.playerRowBg }]}>
+                            <TextInput
+                                style={[styles.nameInput, { color: themeColors.text }]}
+                                placeholder="Enter name"
+                                placeholderTextColor={themeColors.subText}
+                                value={player.name}
+                                onChangeText={(text) => updatePlayerName(player.id, text)}
+                            />
+                        </View>
+
+                        {/* Cross outside the box */}
+                        <TouchableOpacity
+                            onPress={() => removePlayer(player.id)}
+                            style={styles.removeButtonOut}
+                        >
+                            <Text style={[styles.removeTextOut, { color: themeColors.removeText }]}>X</Text>
+                        </TouchableOpacity>
+                    </View>
+                ))}
+
+                {/* Big Green Plus Sign below the list */}
+                <TouchableOpacity
+                    style={[styles.addButton, { backgroundColor: themeColors.addButton }]}
+                    onPress={incrementPlayers}
+                >
+                    <Text style={styles.addText}>+</Text>
+                </TouchableOpacity>
+            </ScrollView>
+
+            {/* Anchored Start Game Button */}
+            <View style={styles.bottomButtonContainer}>
+                <TouchableOpacity
+                    style={[styles.startGameButton, { backgroundColor: themeColors.primaryButton }]}
+                    onPress={handleStartGame}
+                    activeOpacity={0.8}
+                >
+                    <Text style={[styles.startGameText, { color: themeColors.text }]}>START GAME</Text>
+                </TouchableOpacity>
+            </View>
+
+        </Animated.View>
     );
 }
 
@@ -246,124 +226,133 @@ const styles = StyleSheet.create({
     },
     categoryHeader: {
         alignItems: 'center',
-        paddingBottom: 16,
-        borderBottomWidth: 2,
-        marginBottom: 32,
+        paddingBottom: 20,
+        borderBottomWidth: 3, // Thicker line
+        marginBottom: 24,
     },
     categoryLabel: {
-        fontSize: 12,
+        fontSize: 14, // Increased size
         letterSpacing: 1.5,
         marginBottom: 4,
         fontFamily: 'Iosevka-Charon-Medium',
     },
     categoryTitle: {
-        fontSize: 32,
+        fontSize: 28,
+        textTransform: 'uppercase',
         fontFamily: 'Iosevka-Charon-Bold',
-        letterSpacing: 1,
     },
     countControlRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 32,
-        gap: 16,
+        justifyContent: 'center', // Centers everything together
+        gap: 16, // Snugs the text and the counter close
+        marginBottom: 24,
     },
     label: {
-        fontSize: 20,
+        fontSize: 18,
         fontFamily: 'Iosevka-Charon-Bold',
     },
-    htmlSpinnerContainer: {
+    numberSelector: {
         flexDirection: 'row',
         alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    arrowButton: {
+        paddingHorizontal: 12, // Reduced padding to shrink overall width
+        paddingVertical: 10,
+    },
+    arrowText: {
+        fontSize: 18,
+        fontFamily: 'Iosevka-Charon-Bold',
     },
     numberInput: {
-        fontSize: 20,
-        fontFamily: 'Iosevka-Charon-Medium',
-        textAlign: 'center',
-        width: 48,
-        height: 48,
-        borderTopLeftRadius: 8,
-        borderBottomLeftRadius: 8,
-    },
-    spinnerArrows: {
-        height: 48,
-        justifyContent: 'center',
-        paddingLeft: 4,
-    },
-    spinnerBtn: {
-        paddingVertical: 2,
-        paddingHorizontal: 6,
-    },
-    spinnerBtnText: {
-        fontSize: 16,
+        fontSize: 18,
         fontFamily: 'Iosevka-Charon-Bold',
+        textAlign: 'center',
+        minWidth: 32, // Reduced from 40 for a tighter fit
     },
     listContainer: {
         flex: 1,
     },
-    row: {
+    playerRowContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 12,
     },
-    dragHandleContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 40,
-        height: 50,
-        marginRight: 4,
-    },
-    dragHandleText: {
-        fontSize: 32, // Large enough to look like the Figma hamburger
+    dragHandleOut: {
+        fontSize: 24,
+        paddingRight: 12,
         fontFamily: 'Iosevka-Charon-Medium',
-        lineHeight: 32,
-        marginTop: -4, // Optical vertical centering for the unicode symbol
+    },
+    inputBox: {
+        flex: 1,
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
     },
     nameInput: {
-        flex: 1,
-        height: 50,
-        fontSize: 18,
+        fontSize: 16,
+        paddingVertical: 12,
         fontFamily: 'Iosevka-Charon-Medium',
-        paddingHorizontal: 16,
-        borderRadius: 8,
     },
-    removeButton: {
-        paddingLeft: 16,
-        paddingRight: 8,
+    removeButtonOut: {
+        paddingLeft: 14,
+        paddingRight: 4,
     },
-    removeText: {
-        fontSize: 22,
+    removeTextOut: {
+        fontSize: 20,
         fontFamily: 'Iosevka-Charon-Bold',
     },
     addButton: {
         alignSelf: 'center',
-        width: 56,
-        height: 56,
-        borderRadius: 12,
+        width: 50,
+        height: 50,
+        borderRadius: 25,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 16,
-        marginBottom: 20,
+        marginTop: 10,
+        marginBottom: 30,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        elevation: 3,
     },
     addText: {
-        fontSize: 32,
-        fontFamily: 'Iosevka-Charon-Bold',
-        lineHeight: 36,
+        fontSize: 28,
+        color: 'white',
+        lineHeight: 32,
     },
     bottomButtonContainer: {
         paddingVertical: 20,
         paddingBottom: Platform.OS === 'ios' ? 40 : 30,
         backgroundColor: 'transparent',
-        alignItems: 'center',
     },
     startGameButton: {
-        width: 160,
-        paddingVertical: 16,
+        alignSelf: 'stretch',
+        paddingVertical: 18,
         borderRadius: 16,
         alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        elevation: 6,
     },
     startGameText: {
-        fontSize: 20,
-        fontFamily: 'Iosevka-Charon-Medium',
+        fontSize: 18,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        fontFamily: 'Iosevka-Charon-Bold',
     }
 });
