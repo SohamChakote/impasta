@@ -112,7 +112,12 @@ export default function PlayerSetupScreen() {
     };
 
     const handleStartGame = () => {
-        const rawNames = players.map(p => p.name.trim() !== '' ? p.name.trim() : 'Unnamed Player');
+        const emptyFields = players.some(p => p.name.trim() === '');
+        if (emptyFields) {
+            Alert.alert('Hold up!', 'Please fill in the names of all the players');
+            return;
+        }
+        const rawNames = players.map(p => p.name.trim());
         router.push({
             pathname: "/screens/PlayerTurnScreen",
             params: { categoryName: displayCategory, playerNamesParam: JSON.stringify(rawNames) }
@@ -126,7 +131,7 @@ export default function PlayerSetupScreen() {
         subText: '#64748B',
         playerRowBg: '#CFECF3', // The specific blue you requested for the forms
         primaryButton: '#F9B2D7',
-        addButton: '#4ADE80',
+        addButton: '#DAF9DE',
         removeText: '#1E293B', // Dark slate instead of red
     };
 
@@ -143,13 +148,13 @@ export default function PlayerSetupScreen() {
             <View style={styles.countControlRow}>
                 <Text style={[styles.label, { color: themeColors.text }]}>Number of Players:</Text>
 
-                <View style={styles.numberSelector}>
+                <View style={[styles.numberSelector, { backgroundColor: themeColors.addButton }]}>
                     <TouchableOpacity onPress={decrementPlayers} style={styles.arrowButton}>
                         <Text style={[styles.arrowText, { color: themeColors.text }]}>{"<"}</Text>
                     </TouchableOpacity>
 
                     <TextInput
-                        style={[styles.numberInput, { color: themeColors.text }]}
+                        style={[styles.numberInput, { color: themeColors.text, backgroundColor: themeColors.addButton }]}
                         keyboardType="numeric"
                         value={numInput}
                         onChangeText={setNumInput}
@@ -171,16 +176,24 @@ export default function PlayerSetupScreen() {
                 {players.map((player) => (
                     <View key={player.id} style={styles.playerRowContainer}>
                         {/* Hamburger outside the box */}
-                        <Text style={[styles.dragHandleOut, { color: themeColors.subText }]}>=</Text>
+                        <Text style={[styles.dragHandleOut, { color: themeColors.text }]}>=</Text>
 
                         {/* The actual name input box */}
-                        <View style={[styles.inputBox, { backgroundColor: themeColors.playerRowBg }]}>
+                        <View style={[
+                            styles.inputBox,
+                            { backgroundColor: themeColors.playerRowBg },
+                            player.name.trim() === '' && {
+                                borderWidth: 2,
+                                borderColor: themeColors.primaryButton
+                            }
+                        ]}>
                             <TextInput
                                 style={[styles.nameInput, { color: themeColors.text }]}
                                 placeholder="Enter name"
                                 placeholderTextColor={themeColors.subText}
                                 value={player.name}
                                 onChangeText={(text) => updatePlayerName(player.id, text)}
+                                editable={true}
                             />
                         </View>
 
@@ -199,7 +212,7 @@ export default function PlayerSetupScreen() {
                     style={[styles.addButton, { backgroundColor: themeColors.addButton }]}
                     onPress={incrementPlayers}
                 >
-                    <Text style={styles.addText}>+</Text>
+                    <Text style={[styles.addText, { color: themeColors.text }]}>+</Text>
                 </TouchableOpacity>
             </ScrollView>
 
@@ -255,8 +268,8 @@ const styles = StyleSheet.create({
     numberSelector: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
+        backgroundColor: undefined,
+        borderRadius: 20,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -264,8 +277,9 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     arrowButton: {
-        paddingHorizontal: 12, // Reduced padding to shrink overall width
+        paddingHorizontal: 12,
         paddingVertical: 10,
+        borderRadius: 12,
     },
     arrowText: {
         fontSize: 18,
@@ -299,11 +313,13 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.05,
         shadowRadius: 4,
         elevation: 2,
+        borderWidth: 0,
     },
     nameInput: {
         fontSize: 16,
         paddingVertical: 12,
         fontFamily: 'Iosevka-Charon-Medium',
+        outlineWidth: 0,
     },
     removeButtonOut: {
         paddingLeft: 14,
