@@ -7,11 +7,13 @@ import {
     StyleSheet,
     ScrollView,
     BackHandler,
-    Alert,
     Animated,
-    Platform
+    Platform,
+    Modal // <-- Imported Modal
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+
+import { StorageHelper } from '../../backend/StorageHelper';
 
 const MIN_PLAYERS = 3;
 const MAX_PLAYERS = 10;
@@ -39,23 +41,48 @@ export default function PlayerSetupScreen() {
     ]);
     const [numInput, setNumInput] = useState(MIN_PLAYERS.toString());
 
+    // --- Modal State Management ---
+    const [isLoadModalVisible, setIsLoadModalVisible] = useState(false);
+    const [isDiscardModalVisible, setIsDiscardModalVisible] = useState(false);
+    const [savedNamesToLoad, setSavedNamesToLoad] = useState<string[]>([]);
+    const [validationMessage, setValidationMessage] = useState<string | null>(null);
+
+    // --- Check for saved players on load ---
+    useEffect(() => {
+        const loadPreviousNames = async () => {
+            const savedNames = await StorageHelper.loadPlayerNames();
+
+            if (savedNames && savedNames.length > 0) {
+                // Store the names in state and trigger our custom modal
+                setSavedNamesToLoad(savedNames);
+                setIsLoadModalVisible(true);
+            }
+        };
+
+        loadPreviousNames();
+    }, []);
+
+    const handleConfirmLoad = () => {
+        const loadedPlayers = savedNamesToLoad.map((name, index) => ({
+            id: Math.random().toString() + index,
+            name: name
+        }));
+
+        setPlayers(loadedPlayers);
+        setNumInput(loadedPlayers.length.toString());
+        setIsLoadModalVisible(false);
+    };
+
     // 3. Hardware Back Interception
     useFocusEffect(
         useCallback(() => {
             const onBackPress = () => {
-                Alert.alert(
-                    'Discard Changes?',
-                    'Are you sure you want to discard any changes?',
-                    [
-                        { text: 'Cancel', style: 'cancel', onPress: () => {} },
-                        { text: 'Yes', style: 'destructive', onPress: () => router.back() },
-                    ]
-                );
+                setIsDiscardModalVisible(true); // Trigger custom discard modal
                 return true;
             };
             const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
             return () => subscription.remove();
-        }, [router])
+        }, [])
     );
 
     // 4. Player Count Logic
@@ -77,13 +104,13 @@ export default function PlayerSetupScreen() {
             return;
         }
         if (targetCount < MIN_PLAYERS) {
-            Alert.alert('Hold up!', `You need at least ${MIN_PLAYERS} players to play.`);
+            setValidationMessage(`You need at least ${MIN_PLAYERS} players to play.`);
             setNumInput(MIN_PLAYERS.toString());
             updatePlayerArray(MIN_PLAYERS);
             return;
         }
         if (targetCount > MAX_PLAYERS) {
-            Alert.alert('Hold up!', `Maximum of ${MAX_PLAYERS} players allowed for now.`);
+            setValidationMessage(`Maximum of ${MAX_PLAYERS} players allowed for now.`);
             setNumInput(MAX_PLAYERS.toString());
             updatePlayerArray(MAX_PLAYERS);
             return;
@@ -99,7 +126,7 @@ export default function PlayerSetupScreen() {
     // List Handlers
     const removePlayer = (idToRemove: string) => {
         if (players.length <= MIN_PLAYERS) {
-            Alert.alert('Hold up!', `You need at least ${MIN_PLAYERS} players.`);
+            setValidationMessage(`You need at least ${MIN_PLAYERS} players.`);
             return;
         }
         const newPlayers = players.filter(p => p.id !== idToRemove);
@@ -111,40 +138,41 @@ export default function PlayerSetupScreen() {
         setPlayers(players.map(p => p.id === id ? { ...p, name: newName } : p));
     };
 
-    const handleStartGame = () => {
+    // --- Save names to disk when starting game ---
+    const handleStartGame = async () => {
         const emptyFields = players.some(p => p.name.trim() === '');
         if (emptyFields) {
-            Alert.alert('Hold up!', 'Please fill in the names of all the players');
+            setValidationMessage('Please fill in the names of all the players.');
             return;
         }
         const rawNames = players.map(p => p.name.trim());
+
+        await StorageHelper.savePlayerNames(rawNames);
+
         router.push({
             pathname: "/screens/PlayerTurnScreen",
             params: { categoryName: displayCategory, playerNamesParam: JSON.stringify(rawNames) }
         });
     };
 
-    // Hardcoded Figma Palette
     const themeColors = {
-        background: '#F6FFDC', // Light Mint/Yellow
+        background: '#F6FFDC',
         text: '#1E293B',
         subText: '#64748B',
-        playerRowBg: '#CFECF3', // The specific blue you requested for the forms
-        primaryButton: '#F9B2D7',
+        playerRowBg: '#CFECF3',
+        primaryButton: '#F9B2D7', // Pink (Negative/Warning)
+        positiveButton: '#BEE8C1', // Mint Green (Positive/Safe)
         addButton: '#DAF9DE',
-        removeText: '#1E293B', // Dark slate instead of red
+        removeText: '#1E293B',
     };
 
     return (
         <Animated.View style={[styles.mainContainer, { backgroundColor: themeColors.background, opacity: fadeAnim }]}>
-
-            {/* Top Category Header */}
             <View style={[styles.categoryHeader, { borderBottomColor: themeColors.text }]}>
                 <Text style={[styles.categoryLabel, { color: themeColors.subText }]}>PLAYING CATEGORY</Text>
                 <Text style={[styles.categoryTitle, { color: themeColors.text }]}>{displayCategory}</Text>
             </View>
 
-            {/* Interactive Player Count Row (Now Centered & Closer) */}
             <View style={styles.countControlRow}>
                 <Text style={[styles.label, { color: themeColors.text }]}>Number of Players:</Text>
 
@@ -168,17 +196,10 @@ export default function PlayerSetupScreen() {
                 </View>
             </View>
 
-            {/* Scrollable Player List */}
-            <ScrollView
-                style={styles.listContainer}
-                showsVerticalScrollIndicator={false}
-            >
+            <ScrollView style={styles.listContainer} showsVerticalScrollIndicator={false}>
                 {players.map((player) => (
                     <View key={player.id} style={styles.playerRowContainer}>
-                        {/* Hamburger outside the box */}
                         <Text style={[styles.dragHandleOut, { color: themeColors.text }]}>=</Text>
-
-                        {/* The actual name input box */}
                         <View style={[
                             styles.inputBox,
                             { backgroundColor: themeColors.playerRowBg },
@@ -196,27 +217,17 @@ export default function PlayerSetupScreen() {
                                 editable={true}
                             />
                         </View>
-
-                        {/* Cross outside the box */}
-                        <TouchableOpacity
-                            onPress={() => removePlayer(player.id)}
-                            style={styles.removeButtonOut}
-                        >
+                        <TouchableOpacity onPress={() => removePlayer(player.id)} style={styles.removeButtonOut}>
                             <Text style={[styles.removeTextOut, { color: themeColors.removeText }]}>X</Text>
                         </TouchableOpacity>
                     </View>
                 ))}
 
-                {/* Big Green Plus Sign below the list */}
-                <TouchableOpacity
-                    style={[styles.addButton, { backgroundColor: themeColors.addButton }]}
-                    onPress={incrementPlayers}
-                >
+                <TouchableOpacity style={[styles.addButton, { backgroundColor: themeColors.addButton }]} onPress={incrementPlayers}>
                     <Text style={[styles.addText, { color: themeColors.text }]}>+</Text>
                 </TouchableOpacity>
             </ScrollView>
 
-            {/* Anchored Start Game Button */}
             <View style={styles.bottomButtonContainer}>
                 <TouchableOpacity
                     style={[styles.startGameButton, { backgroundColor: themeColors.primaryButton }]}
@@ -227,6 +238,90 @@ export default function PlayerSetupScreen() {
                 </TouchableOpacity>
             </View>
 
+            {/* Modal 1: Load Previous Names */}
+            <Modal transparent={true} animationType="fade" visible={isLoadModalVisible} onRequestClose={() => setIsLoadModalVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
+                        <Text style={[styles.modalTitle, { color: themeColors.text }]}>Load Previous Players?</Text>
+                        <Text style={[styles.modalMessage, { color: themeColors.text }]}>
+                            We found a saved list of players from your last game. Do you want to use it?
+                        </Text>
+
+                        <View style={styles.modalButtonRow}>
+                            {/* Negative Action (Left - Pink) */}
+                            <TouchableOpacity
+                                style={[styles.modalActionBtn, { backgroundColor: themeColors.primaryButton }]}
+                                onPress={() => setIsLoadModalVisible(false)}
+                            >
+                                <Text style={[styles.modalBtnText, { color: themeColors.text }]}>Start Fresh</Text>
+                            </TouchableOpacity>
+
+                            {/* Positive Action (Right - Green) */}
+                            <TouchableOpacity
+                                style={[styles.modalActionBtn, { backgroundColor: themeColors.positiveButton }]}
+                                onPress={handleConfirmLoad}
+                            >
+                                <Text style={[styles.modalBtnText, { color: themeColors.text }]}>Load</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modal 2: Discard Changes (Back Button) */}
+            <Modal transparent={true} animationType="fade" visible={isDiscardModalVisible} onRequestClose={() => setIsDiscardModalVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
+                        <Text style={[styles.modalTitle, { color: themeColors.text }]}>Discard Changes?</Text>
+                        <Text style={[styles.modalMessage, { color: themeColors.text }]}>
+                            Are you sure you want to go back? Any changes to the player list will be lost.
+                        </Text>
+
+                        <View style={styles.modalButtonRow}>
+                            {/* Negative Action (Left - Pink) */}
+                            <TouchableOpacity
+                                style={[styles.modalActionBtn, { backgroundColor: themeColors.primaryButton }]}
+                                onPress={() => {
+                                    setIsDiscardModalVisible(false);
+                                    router.back();
+                                }}
+                            >
+                                <Text style={[styles.modalBtnText, { color: themeColors.text }]}>Discard</Text>
+                            </TouchableOpacity>
+
+                            {/* Positive Action (Right - Green) */}
+                            <TouchableOpacity
+                                style={[styles.modalActionBtn, { backgroundColor: themeColors.positiveButton }]}
+                                onPress={() => setIsDiscardModalVisible(false)}
+                            >
+                                <Text style={[styles.modalBtnText, { color: themeColors.text }]}>Stay</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Modal 3: Validation Alerts (Replacing standard alerts for a 100% themed app) */}
+            <Modal transparent={true} animationType="fade" visible={validationMessage !== null} onRequestClose={() => setValidationMessage(null)}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
+                        <Text style={[styles.modalTitle, { color: themeColors.text }]}>Hold Up!</Text>
+                        <Text style={[styles.modalMessage, { color: themeColors.text }]}>
+                            {validationMessage}
+                        </Text>
+
+                        <View style={styles.modalButtonRow}>
+                            {/* Just one acknowledgement button for warnings */}
+                            <TouchableOpacity
+                                style={[styles.modalActionBtn, { backgroundColor: themeColors.positiveButton }]}
+                                onPress={() => setValidationMessage(null)}
+                            >
+                                <Text style={[styles.modalBtnText, { color: themeColors.text }]}>Got it</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </Animated.View>
     );
 }
@@ -240,11 +335,11 @@ const styles = StyleSheet.create({
     categoryHeader: {
         alignItems: 'center',
         paddingBottom: 20,
-        borderBottomWidth: 3, // Thicker line
+        borderBottomWidth: 3,
         marginBottom: 24,
     },
     categoryLabel: {
-        fontSize: 14, // Increased size
+        fontSize: 14,
         letterSpacing: 1.5,
         marginBottom: 4,
         fontFamily: 'Iosevka-Charon-Medium',
@@ -253,12 +348,13 @@ const styles = StyleSheet.create({
         fontSize: 28,
         textTransform: 'uppercase',
         fontFamily: 'Iosevka-Charon-Bold',
+        textAlign: 'center',
     },
     countControlRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center', // Centers everything together
-        gap: 16, // Snugs the text and the counter close
+        justifyContent: 'center',
+        gap: 16,
         marginBottom: 24,
     },
     label: {
@@ -289,7 +385,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontFamily: 'Iosevka-Charon-Bold',
         textAlign: 'center',
-        minWidth: 32, // Reduced from 40 for a tighter fit
+        minWidth: 32,
     },
     listContainer: {
         flex: 1,
@@ -370,5 +466,54 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         letterSpacing: 1,
         fontFamily: 'Iosevka-Charon-Bold',
+    },
+    // --- Modal Styles ---
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    modalContent: {
+        width: '100%',
+        padding: 24,
+        borderRadius: 20,
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 10,
+    },
+    modalTitle: {
+        fontSize: 24,
+        fontFamily: 'Iosevka-Charon-Bold',
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    modalMessage: {
+        fontSize: 16,
+        fontFamily: 'Iosevka-Charon-Medium',
+        textAlign: 'center',
+        marginBottom: 24,
+    },
+    modalButtonRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        gap: 12,
+    },
+    modalActionBtn: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    modalBtnText: {
+        fontSize: 16,
+        fontFamily: 'Iosevka-Charon-Bold',
+        textTransform: 'uppercase',
+        textAlign: 'center',
     }
 });

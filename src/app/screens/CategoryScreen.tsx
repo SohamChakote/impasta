@@ -7,22 +7,18 @@ import {
     Image,
     ScrollView,
     BackHandler,
-    Alert,
     Animated,
-    Platform
+    Platform,
+    Modal // <-- Imported Modal
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-
-const CATEGORY_LIST = [
-    { id: 'random', name: 'Random', image: 'https://via.placeholder.com/60/808080/FFFFFF?text=?' },
-    { id: 'mixed', name: 'All / Mixed', image: 'https://via.placeholder.com/60/808080/FFFFFF?text=All' },
-    { id: 'foods', name: 'Foods', image: 'https://via.placeholder.com/60/808080/FFFFFF?text=Food' },
-    { id: 'movies', name: 'Movies', image: 'https://via.placeholder.com/60/808080/FFFFFF?text=Film' },
-];
+// Make sure this import path matches your alias setup
+import { CATEGORY_MAP } from '@/backend/CategoryHelper';
 
 export default function CategoryScreen() {
     const router = useRouter();
     const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+    const [isQuitModalVisible, setIsQuitModalVisible] = useState(false); // <-- State for our custom modal
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -36,14 +32,8 @@ export default function CategoryScreen() {
     useFocusEffect(
         useCallback(() => {
             const onBackPress = () => {
-                Alert.alert(
-                    'Quit App?',
-                    'Are you sure you want to quit the app?',
-                    [
-                        { text: 'Cancel', style: 'cancel', onPress: () => {} },
-                        { text: 'Yes', style: 'destructive', onPress: () => BackHandler.exitApp() },
-                    ]
-                );
+                // Trigger our custom modal instead of native Alert
+                setIsQuitModalVisible(true);
                 return true;
             };
             const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
@@ -60,6 +50,8 @@ export default function CategoryScreen() {
         buttonBackground: '#F9B2D7',
         buttonText: '#1E293B',
     };
+
+    const categoryKeys = Object.keys(CATEGORY_MAP);
 
     return (
         <Animated.View style={[styles.container, { backgroundColor: themeColors.background, opacity: fadeAnim }]}>
@@ -78,12 +70,15 @@ export default function CategoryScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.listContentPadding}
             >
-                {CATEGORY_LIST.map((category) => {
-                    const isSelected = selectedCategoryId === category.id;
+                {categoryKeys.map((key) => {
+                    const categoryData = CATEGORY_MAP[key];
+                    const isSelected = selectedCategoryId === key;
+                    const displayName = key.charAt(0).toUpperCase() + key.slice(1);
+
                     return (
                         <TouchableOpacity
-                            key={category.id}
-                            onPress={() => setSelectedCategoryId(category.id)}
+                            key={key}
+                            onPress={() => setSelectedCategoryId(key)}
                             style={[
                                 styles.categoryCard,
                                 {
@@ -97,10 +92,13 @@ export default function CategoryScreen() {
                             ]}
                             activeOpacity={0.8}
                         >
-                            <Image source={{ uri: category.image }} style={styles.categoryImage} />
+                            <Text style={styles.categoryEmoji}>
+                                {categoryData.emoji || "❓"}
+                            </Text>
+
                             <View style={styles.categoryNameWrapper}>
                                 <Text style={[styles.categoryName, { color: themeColors.text }]}>
-                                    {category.name}
+                                    {displayName}
                                 </Text>
                             </View>
                         </TouchableOpacity>
@@ -108,7 +106,6 @@ export default function CategoryScreen() {
                 })}
             </ScrollView>
 
-            {/* Anchored bottom container to prevent cutoff */}
             <View style={styles.bottomButtonContainer}>
                 <TouchableOpacity
                     style={[
@@ -119,7 +116,7 @@ export default function CategoryScreen() {
                     disabled={!selectedCategoryId}
                     onPress={() => router.push({
                         pathname: "/screens/PlayerSetupScreen",
-                        params: { categoryName: CATEGORY_LIST.find(c => c.id === selectedCategoryId)?.name }
+                        params: { categoryName: selectedCategoryId }
                     })}
                     activeOpacity={0.8}
                 >
@@ -132,6 +129,41 @@ export default function CategoryScreen() {
                     </Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Custom Themed Quit Modal */}
+            <Modal
+                transparent={true}
+                animationType="fade"
+                visible={isQuitModalVisible}
+                onRequestClose={() => setIsQuitModalVisible(false)} // Handles back swipe on the modal itself
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
+                        <Text style={[styles.modalTitle, { color: themeColors.text }]}>Quit App?</Text>
+                        <Text style={[styles.modalMessage, { color: themeColors.text }]}>
+                            Are you sure you want to leave the party?
+                        </Text>
+
+                        <View style={styles.modalButtonRow}>
+                            {/* Negative Action (Quit) - Pink */}
+                            <TouchableOpacity
+                                style={[styles.modalActionBtn, { backgroundColor: themeColors.buttonBackground }]}
+                                onPress={() => BackHandler.exitApp()}
+                            >
+                                <Text style={[styles.modalBtnText, { color: themeColors.text }]}>Quit</Text>
+                            </TouchableOpacity>
+
+                            {/* Positive Action (Cancel/Stay) - Mint Green */}
+                            <TouchableOpacity
+                                style={[styles.modalActionBtn, { backgroundColor: themeColors.selectedBackground }]}
+                                onPress={() => setIsQuitModalVisible(false)}
+                            >
+                                <Text style={[styles.modalBtnText, { color: themeColors.text }]}>Stay</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </Animated.View>
     );
 }
@@ -167,7 +199,8 @@ const styles = StyleSheet.create({
     categoryCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        alignSelf: 'stretch',
+        alignSelf: 'center',
+        width: '95%',
         paddingVertical: 10,
         paddingHorizontal: 12,
         marginBottom: 16,
@@ -176,10 +209,10 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 4 },
         shadowRadius: 6,
     },
-    categoryImage: {
+    categoryEmoji: {
+        fontSize: 28,
         width: 40,
-        height: 40,
-        borderRadius: 8,
+        textAlign: 'center',
     },
     categoryNameWrapper: {
         flex: 1,
@@ -191,10 +224,9 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
         fontFamily: 'Iosevka-Charon-Medium',
     },
-    // Fixes the button cutoff issue
     bottomButtonContainer: {
         paddingVertical: 20,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 30, // Extra padding for safe area
+        paddingBottom: Platform.OS === 'ios' ? 40 : 30,
         backgroundColor: 'transparent',
     },
     chooseButton: {
@@ -222,5 +254,52 @@ const styles = StyleSheet.create({
     },
     disabledButtonText: {
         color: '#94A3B8',
+    },
+    // --- New Modal Styles ---
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)', // Creates the dark see-through background
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    modalContent: {
+        width: '100%',
+        padding: 24,
+        borderRadius: 20,
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 10,
+    },
+    modalTitle: {
+        fontSize: 24,
+        fontFamily: 'Iosevka-Charon-Bold',
+        marginBottom: 12,
+    },
+    modalMessage: {
+        fontSize: 16,
+        fontFamily: 'Iosevka-Charon-Medium',
+        textAlign: 'center',
+        marginBottom: 24,
+    },
+    modalButtonRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        gap: 12, // Space between buttons
+    },
+    modalActionBtn: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 12,
+        alignItems: 'center',
+    },
+    modalBtnText: {
+        fontSize: 16,
+        fontFamily: 'Iosevka-Charon-Bold',
+        textTransform: 'uppercase',
     }
 });

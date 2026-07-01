@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Alert, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 
 export default function RevealScreen() {
@@ -11,6 +11,9 @@ export default function RevealScreen() {
 
     // 2. A silent flag to let the green button bypass the back-button alert
     const isManualExit = useRef(false);
+
+    // 3. State to control the quit confirmation modal
+    const [isQuitModalVisible, setIsQuitModalVisible] = useState(false);
 
     // 3. Animation Values
     const nameOpacity = useRef(new Animated.Value(0)).current;
@@ -26,7 +29,8 @@ export default function RevealScreen() {
     const theme = {
         background: '#F6FFDC',      // Soft Pale Yellow
         text: '#1E293B',            // Dark Slate
-        primaryButton: '#F9B2D7',   // Bubblegum Pink
+        primaryButton: '#F9B2D7',   // Bubblegum Pink (Negative/Quit)
+        positiveButton: '#BEE8C1',  // Mint (Stay)
     };
 
     // --- INTERCEPT BACK BUTTON ---
@@ -39,28 +43,7 @@ export default function RevealScreen() {
 
             // Otherwise, stop the default back action (swipes or hardware button)
             e.preventDefault();
-
-            Alert.alert(
-                'Quit Game?',
-                'Are you sure you want to quit the game and return to the main menu?',
-                [
-                    {
-                        text: 'No',
-                        style: 'cancel',
-                        onPress: () => {}
-                    },
-                    {
-                        text: 'Yes',
-                        style: 'destructive',
-                        onPress: () => {
-                            // Flip the flag so we don't trigger this alert again in a loop
-                            isManualExit.current = true;
-                            // Route them to Category Screen
-                            router.replace('/screens/CategoryScreen');
-                        },
-                    },
-                ]
-            );
+            setIsQuitModalVisible(true);
         });
 
         return unsubscribe;
@@ -88,6 +71,13 @@ export default function RevealScreen() {
     // Return to Category Screen action
     const handleFinishGame = () => {
         isManualExit.current = true;
+        router.replace('/screens/CategoryScreen');
+    };
+
+    // Handle quit confirmation in modal
+    const handleConfirmQuit = () => {
+        isManualExit.current = true;
+        setIsQuitModalVisible(false);
         router.replace('/screens/CategoryScreen');
     };
 
@@ -133,6 +123,24 @@ export default function RevealScreen() {
                     </TouchableOpacity>
                 </Animated.View>
             )}
+
+            {/* Themed Quit Modal */}
+            <Modal transparent={true} animationType="fade" visible={isQuitModalVisible} onRequestClose={() => setIsQuitModalVisible(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+                        <Text style={[styles.modalTitle, { color: theme.text }]}>Quit Game?</Text>
+                        <Text style={[styles.modalMessage, { color: theme.text }]}>Progress will be lost. Are you sure?</Text>
+                        <View style={styles.modalButtonRow}>
+                            <TouchableOpacity style={[styles.modalActionBtn, { backgroundColor: theme.primaryButton }]} onPress={handleConfirmQuit}>
+                                <Text style={[styles.modalBtnText, { color: theme.text }]}>Quit</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.modalActionBtn, { backgroundColor: theme.positiveButton }]} onPress={() => setIsQuitModalVisible(false)}>
+                                <Text style={[styles.modalBtnText, { color: theme.text }]}>Stay</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
         </View>
     );
@@ -195,5 +203,12 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         textTransform: 'uppercase',
         letterSpacing: 1.5,
-    }
+    },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+    modalContent: { width: '100%', padding: 24, borderRadius: 20, alignItems: 'center' },
+    modalTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 12 },
+    modalMessage: { fontSize: 16, textAlign: 'center', marginBottom: 24 },
+    modalButtonRow: { flexDirection: 'row', gap: 12, width: '100%' },
+    modalActionBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+    modalBtnText: { fontSize: 16, fontWeight: 'bold', textTransform: 'uppercase' }
 });

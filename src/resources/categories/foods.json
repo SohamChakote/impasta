@@ -1,0 +1,14 @@
+[
+  {
+    "word": "Apple",
+    "hints": ["Red", "Crispy", "Doctor"]
+  },
+  {
+    "word": "Bread",
+    "hints": ["Bakery", "Carbs", "Sliced"]
+  },
+  {
+    "word": "Cheese",
+    "hints": ["Milk", "Melt", "Holes"]
+  }
+]
