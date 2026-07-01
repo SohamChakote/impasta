@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, Animated } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
-import { AdManager } from '@/backend/adManager'; // <-- Imported AdManager
+// import { AdManager } from '@/backend/adManager'; // <-- Imported AdManager
 
 export default function RevealScreen() {
     const router = useRouter();
@@ -72,20 +72,20 @@ export default function RevealScreen() {
     // Return to Category Screen action
     const handleFinishGame = () => {
         isManualExit.current = true;
-        // Trigger ad. Navigate to category screen when ad is done (or immediately if skipped)
-        AdManager.showAdIfReady(() => {
-            router.replace('/screens/CategoryScreen');
-        });
+        // AdManager.showAdIfReady(() => {
+        //     router.replace('/screens/CategoryScreen');
+        // });
+        router.replace('/screens/CategoryScreen');
     };
 
     // Handle quit confirmation in modal
     const handleConfirmQuit = () => {
         isManualExit.current = true;
         setIsQuitModalVisible(false);
-        // Trigger ad. Navigate to category screen when ad is done (or immediately if skipped)
-        AdManager.showAdIfReady(() => {
-            router.replace('/screens/CategoryScreen');
-        });
+        // AdManager.showAdIfReady(() => {
+        //     router.replace('/screens/CategoryScreen');
+        // });
+        router.replace('/screens/CategoryScreen');
     };
 
     return (
