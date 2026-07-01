@@ -10,5 +10,9 @@
   {
     "word": "Cheese",
     "hints": ["Milk", "Melt", "Holes"]
+  },
+  {
+    "word": "Pizza",
+    "hints": ["Round", "Slice", "Oven"]
   }
 ]

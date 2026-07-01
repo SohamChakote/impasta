@@ -3,12 +3,13 @@
     "name": "impasta",
     "slug": "impasta",
     "version": "1.0.0",
+    "description": "A thrilling and chaotic local party game where players try to blend in while one 'Impasta' tries to deduce the secret word using faint, clever hints!",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "impasta",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./src/resources/logos/outsideAppLogo.png"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,7 +18,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.smc.impasta"
     },
     "web": {
       "output": "static",
@@ -38,11 +40,24 @@
       "expo-font",
       "expo-image",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-5011119175501642~3324602687",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "89316b58-2dd8-4d02-9d7a-ba73888fb9d3"
+      }
     }
   }
 }

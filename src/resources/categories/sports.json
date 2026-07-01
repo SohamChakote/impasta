@@ -1,0 +1,46 @@
+[
+  {
+    "word": "Cricket",
+    "hints": ["Pads", "Ball"]
+  },
+  {
+    "word": "Football",
+    "hints": ["Pitch", "Cards"]
+  },
+  {
+    "word": "Badminton",
+    "hints": ["Net", "Racket", "Smash"]
+  },
+  {
+    "word": "Basketball",
+    "hints": ["Court", "Bounce"]
+  },
+  {
+    "word": "Boxing",
+    "hints": ["Ring", "Gloves", "Rounds", "Weight"]
+  },
+  {
+    "word": "Formula 1",
+    "hints": ["Speed", "Laps"]
+  },
+  {
+    "word": "Tennis",
+    "hints": ["Net", "Racket", "Love", "Court"]
+  },
+  {
+    "word": "Swimming",
+    "hints": ["Goggles", "Stroke", "Breath"]
+  },
+  {
+    "word": "Volleyball",
+    "hints": ["Beach", "Net", "Hands"]
+  },
+  {
+    "word": "Gymnastics",
+    "hints": ["Flexible", "Flip"]
+  },
+  {
+    "word": "Table Tennis",
+    "hints": ["Paddle", "Ball", "Spin", "Table"]
+  }
+]

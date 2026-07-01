@@ -1,0 +1,30 @@
+[
+  {
+    "word": "Eiffel Tower",
+    "hints": ["France", "Metal", "Tall", "Romance"]
+  },
+  {
+    "word": "Great Wall of China",
+    "hints": ["Long", "Ancient", "Asia", "Bricks"]
+  },
+  {
+    "word": "Taj Mahal",
+    "hints": ["India", "White", "Tomb", "Marble"]
+  },
+  {
+    "word": "Pyramids of Giza",
+    "hints": ["Egypt", "Desert", "Pharaoh", "Triangles"]
+  },
+  {
+    "word": "Statue of Liberty",
+    "hints": ["New York", "Torch", "Green", "Gift"]
+  },
+  {
+    "word": "Colosseum",
+    "hints": ["Rome", "Gladiators", "Ruins", "Arena"]
+  },
+  {
+    "word": "Mount Everest",
+    "hints": ["Tallest", "Climb", "Snow", "Himalayas"]
+  }
+]

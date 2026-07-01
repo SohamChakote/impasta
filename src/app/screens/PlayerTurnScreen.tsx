@@ -7,16 +7,14 @@ import {
     TouchableOpacity,
     Animated,
     BackHandler,
-    Modal, // <-- Imported for themed pop-ups
+    Modal,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+import Svg, { Rect, Path, Mask } from 'react-native-svg'; // <-- New imports for smooth scratching
 import { PlayerList } from "@/backend/PlayerList";
 import { CategoryHelper } from "@/backend/CategoryHelper";
 
 const CARD_SIZE = 260;
-const GRID_ROWS = 8;
-const GRID_COLS = 8;
-const TILE_SIZE = CARD_SIZE / GRID_COLS;
 
 export default function PlayerTurnScreen() {
     const router = useRouter();
@@ -59,8 +57,9 @@ export default function PlayerTurnScreen() {
     const [currentPlayerIdx, setCurrentPlayerIdx] = useState(0);
     const activePlayer = gameBackend.players[currentPlayerIdx];
 
-    const [scratchedTiles, setScratchedTiles] = useState<Set<number>>(new Set());
-    const isScratched = scratchedTiles.size > 0;
+    // --- NEW: Smooth Scratch State ---
+    const [path, setPath] = useState('');
+    const [isScratched, setIsScratched] = useState(false);
 
     const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -78,29 +77,28 @@ export default function PlayerTurnScreen() {
         }
     }, [isScratched, pulseAnim]);
 
+    // --- NEW: Smooth Drawing Logic ---
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
             onMoveShouldSetPanResponder: () => true,
-            onPanResponderGrant: (evt) => handleScratch(evt.nativeEvent),
-            onPanResponderMove: (evt) => handleScratch(evt.nativeEvent),
+            onPanResponderGrant: (evt) => {
+                const { locationX, locationY } = evt.nativeEvent;
+                setPath((prev) => `${prev} M ${locationX} ${locationY}`);
+            },
+            onPanResponderMove: (evt) => {
+                const { locationX, locationY } = evt.nativeEvent;
+                setPath((prev) => `${prev} L ${locationX} ${locationY}`);
+                if (!isScratched) setIsScratched(true);
+            },
         })
     ).current;
-
-    const handleScratch = (nativeEvent: any) => {
-        const { locationX, locationY } = nativeEvent;
-        if (locationX >= 0 && locationX <= CARD_SIZE && locationY >= 0 && locationY <= CARD_SIZE) {
-            const col = Math.floor(locationX / TILE_SIZE);
-            const row = Math.floor(locationY / TILE_SIZE);
-            const index = row * GRID_COLS + col;
-            setScratchedTiles((prev) => new Set(prev).add(index));
-        }
-    };
 
     const handleNextPlayer = () => {
         if (currentPlayerIdx < gameBackend.numPlayers - 1) {
             setCurrentPlayerIdx(currentPlayerIdx + 1);
-            setScratchedTiles(new Set());
+            setPath(''); // Reset the scratch path for the next player
+            setIsScratched(false);
         } else {
             const imposter = gameBackend.getImposter();
             router.push({
@@ -116,8 +114,8 @@ export default function PlayerTurnScreen() {
         subText: '#1E293B',
         cardHidden: '#CFECF3',
         cardRevealed: '#DAF9DE',
-        primaryButton: '#F9B2D7', // Pink (Negative/Quit)
-        positiveButton: '#BEE8C1', // Mint (Stay)
+        primaryButton: '#F9B2D7',
+        positiveButton: '#BEE8C1',
     };
 
     if (!activePlayer) return null;
@@ -130,7 +128,9 @@ export default function PlayerTurnScreen() {
                 <Text style={[styles.smallText, { color: theme.subText, opacity: 0.8 }]}>then scratch the card:</Text>
             </View>
 
+            {/* --- NEW: SVG Masking Layout --- */}
             <View style={[styles.cardContainer, { backgroundColor: theme.cardRevealed }]}>
+                {/* 1. The Bottom Layer (The Secret) */}
                 <View style={styles.secretDataContainer}>
                     {activePlayer.isImposter ? (
                         <>
@@ -145,13 +145,33 @@ export default function PlayerTurnScreen() {
                     )}
                 </View>
 
-                <View style={styles.tileGrid}>
-                    {Array.from({ length: GRID_ROWS * GRID_COLS }).map((_, i) => (
-                        <View key={i} style={[{ backgroundColor: theme.cardHidden, width: TILE_SIZE, height: TILE_SIZE, opacity: scratchedTiles.has(i) ? 0 : 1 }]} />
-                    ))}
-                    <Text style={[styles.scratchText, { color: theme.text, opacity: isScratched ? 0 : 0.6 }]}>SCRATCH TO REVEAL</Text>
+                {/* 2. The Top Layer (The Scratchable Cover) */}
+                <View style={styles.touchOverlay} {...panResponder.panHandlers}>
+                    <Svg width={CARD_SIZE} height={CARD_SIZE}>
+                        <Mask id="scratch-mask">
+                            {/* White keeps the cover visible */}
+                            <Rect width="100%" height="100%" fill="white" />
+                            {/* Black acts as the eraser where your finger touches */}
+                            <Path
+                                d={path}
+                                fill="none"
+                                stroke="black"
+                                strokeWidth={45} // <--- Change this to make the eraser thicker/thinner
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </Mask>
+                        {/* The actual colored cover that gets masked out */}
+                        <Rect width="100%" height="100%" fill={theme.cardHidden} mask="url(#scratch-mask)" />
+                    </Svg>
+
+                    {/* The Instruction Text (Only shows before they start scratching) */}
+                    {!isScratched && (
+                        <View style={styles.instructionOverlay} pointerEvents="none">
+                            <Text style={[styles.scratchText, { color: theme.text }]}>SCRATCH TO REVEAL</Text>
+                        </View>
+                    )}
                 </View>
-                <View style={styles.touchOverlay} {...panResponder.panHandlers} />
             </View>
 
             <Animated.View style={currentPlayerIdx < gameBackend.numPlayers - 1 ? { transform: [{ scale: pulseAnim }] } : {}}>
@@ -192,9 +212,9 @@ const styles = StyleSheet.create({
     secretDataContainer: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center', padding: 20 },
     secretSmall: { fontSize: 16, fontWeight: '600', textAlign: 'center', marginBottom: 10 },
     secretLarge: { fontSize: 32, fontWeight: 'bold', textAlign: 'center' },
-    tileGrid: { ...StyleSheet.absoluteFill, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center' },
-    scratchText: { position: 'absolute', fontSize: 18, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
     touchOverlay: { ...StyleSheet.absoluteFill },
+    instructionOverlay: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
+    scratchText: { fontSize: 18, fontWeight: '900', letterSpacing: 1.5, textTransform: 'uppercase' },
     nextButton: { paddingVertical: 18, paddingHorizontal: 30, borderRadius: 999 },
     nextButtonText: { fontSize: 16, fontWeight: 'bold', textTransform: 'uppercase' },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 },

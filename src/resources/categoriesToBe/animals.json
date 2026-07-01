@@ -1,0 +1,30 @@
+[
+  {
+    "word": "Elephant",
+    "hints": ["Trunk", "Memory", "Tusks", "Grey"]
+  },
+  {
+    "word": "Penguin",
+    "hints": ["Ice", "Tuxedo", "Bird", "Waddle"]
+  },
+  {
+    "word": "Kangaroo",
+    "hints": ["Pouch", "Jump", "Australia", "Tail"]
+  },
+  {
+    "word": "Tiger",
+    "hints": ["Stripes", "Cat", "Jungle", "Fierce"]
+  },
+  {
+    "word": "Dolphin",
+    "hints": ["Ocean", "Smart", "Mammal", "Click"]
+  },
+  {
+    "word": "Chameleon",
+    "hints": ["Colors", "Reptile", "Tongue", "Blend"]
+  },
+  {
+    "word": "Camel",
+    "hints": ["Desert", "Humps", "Spit", "Water"]
+  }
+]

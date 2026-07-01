@@ -1,0 +1,50 @@
+[
+  {
+    "word": "India",
+    "hints": ["Diverse", "Spices"]
+  },
+  {
+    "word": "Japan",
+    "hints": ["Island", "Cherry Blossoms", "Earthquakes"]
+  },
+  {
+    "word": "Brazil",
+    "hints": ["Rainforest", "Statue", "Football"]
+  },
+  {
+    "word": "Egypt",
+    "hints": ["Desert", "River", "Ancient", "Monuments"]
+  },
+  {
+    "word": "Australia",
+    "hints": ["Island", "Desert", "Marsupials", "Reef"]
+  },
+  {
+    "word": "Canada",
+    "hints": ["Cold", "Syrup", "Leaf"]
+  },
+  {
+    "word": "South Africa",
+    "hints": ["Safari"]
+  },
+  {
+    "word": "Mexico",
+    "hints": ["Pyramids", "Spicy", "Cactus"]
+  },
+  {
+    "word": "China",
+    "hints": ["Dragon", "Populous"]
+  },
+  {
+    "word": "France",
+    "hints": ["Art", "Bread"]
+  },
+  {
+    "word": "Kenya",
+    "hints": ["Safari", "Africa"]
+  },
+  {
+    "word": "Greece",
+    "hints": ["Mythology"]
+  }
+]

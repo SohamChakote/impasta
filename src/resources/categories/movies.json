@@ -18,5 +18,45 @@
   {
     "word": "Dangal",
     "hints": ["Aamir Khan", "Dad", "Sports"]
+  },
+  {
+  "word": "Sholay",
+  "hints": ["Friendship", "Coin", "Dacoit"]
+  },
+  {
+    "word": "Lagaan",
+    "hints": ["Tax", "British", "Village", "Sports"]
+  },
+  {
+    "word": "Zindagi Na Milegi Dobara",
+    "hints": ["Spain", "Road Trip", "Friends", "Tomatoes"]
+  },
+  {
+    "word": "RRR",
+    "hints": ["Freedom", "British", "Dance", "Oscar"]
+  },
+  {
+    "word": "Kahaani",
+    "hints": ["Kolkata", "Pregnancy", "Mystery"]
+  },
+  {
+    "word": "Dilwale Dulhania Le Jayenge",
+    "hints": ["Europe", "Train", "Romance", "Mustard Field"]
+  },
+  {
+    "word": "PK",
+    "hints": ["Alien", "Radio", "Religion", "Aamir Khan"]
+  },
+  {
+    "word": "Baahubali",
+    "hints": ["Epic", "Waterfall", "Kingdom", "Sword"]
+  },
+  {
+    "word": "Slumdog Millionaire",
+    "hints": ["Game Show", "Mumbai", "Oscar", "Destiny"]
+  },
+  {
+    "word": "Kabhi Khushi Kabhie Gham",
+    "hints": ["Family", "Helicopter", "Tears", "Mansion"]
   }
 ]

@@ -47,7 +47,7 @@ export default function TitleScreen() {
         <View style={[styles.container, { backgroundColor: themeColors.background }]}>
             <Animated.View style={[styles.contentWrapper, { opacity: fadeAnim }]}>
                 <Image
-                    source={{ uri: 'https://via.placeholder.com/60/808080/FFFFFF?text=Logo' }}
+                    source={require('../../resources/logos/insideAppLogo.png')}
                     style={styles.logo}
                 />
 

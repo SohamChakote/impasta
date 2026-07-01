@@ -1,0 +1,38 @@
+[
+  {
+    "word": "Shah Rukh Khan",
+    "hints": ["Actor", "Romance", "Arms Open"]
+  },
+  {
+    "word": "Lionel Messi",
+    "hints": ["Athlete", "Left Foot"]
+  },
+  {
+    "word": "Jackie Chan",
+    "hints": ["Actor", "Martial Arts", "Stunts", "Comedy"]
+  },
+  {
+    "word": "Albert Einstein",
+    "hints": ["Scientist", "Physics", "Hair", "Genius"]
+  },
+  {
+    "word": "Nelson Mandela",
+    "hints": ["Leader", "Africa", "Prison", "Peace"]
+  },
+  {
+    "word": "Cristiano Ronaldo",
+    "hints": ["Athlete", "Number 7"]
+  },
+  {
+    "word": "Taylor Swift",
+    "hints": ["Singer", "Guitar", "Breakups"]
+  },
+  {
+    "word": "Elon Musk",
+    "hints": ["Space", "Cars", "Billionaire", "Mars"]
+  },
+  {
+    "word": "Bruce Lee",
+    "hints": ["Martial Arts", "Fighter"]
+  }
+]

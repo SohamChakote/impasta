@@ -1,6 +1,9 @@
 // 1. Import the JSON files directly at the top of the file
 import foodData from '../resources/categories/foods.json';
 import moviesData from '../resources/categories/movies.json';
+import sportsData from '../resources/categories/sports.json';
+import personalitiesData from '../resources/categories/personalities.json';
+import countriesData from '../resources/categories/countries.json';
 
 export type WordItem = {
     word: string;
@@ -29,6 +32,18 @@ export const CATEGORY_MAP: Record<string, CategoryDetails> = {
         data: moviesData,
         emoji: "🎬",
     },
+    "sports": {
+        data: sportsData,
+        emoji: "⚽"
+    },
+    "personalities": {
+        data: personalitiesData,
+        emoji: "👤"
+    },
+    "countries": {
+        data: countriesData,
+        emoji: "🌏"
+    }
 };
 
 export class CategoryHelper {

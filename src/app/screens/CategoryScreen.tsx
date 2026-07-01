@@ -57,7 +57,7 @@ export default function CategoryScreen() {
         <Animated.View style={[styles.container, { backgroundColor: themeColors.background, opacity: fadeAnim }]}>
             <View style={styles.headerRow}>
                 <Image
-                    source={{ uri: 'https://via.placeholder.com/40/808080/FFFFFF?text=Logo' }}
+                    source={require('../../resources/logos/insideAppLogo.png')}
                     style={styles.headerLogo}
                 />
                 <Text style={[styles.title, { color: themeColors.text }]}>
@@ -180,8 +180,8 @@ const styles = StyleSheet.create({
         marginBottom: 32,
     },
     headerLogo: {
-        width: 40,
-        height: 40,
+        width: 36,
+        height: 36,
         borderRadius: 8,
         marginRight: 12,
     },

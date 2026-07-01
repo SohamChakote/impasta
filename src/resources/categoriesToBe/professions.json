@@ -1,0 +1,30 @@
+[
+  {
+    "word": "Doctor",
+    "hints": ["Stethoscope", "Hospital", "Health", "Medicine"]
+  },
+  {
+    "word": "Chef",
+    "hints": ["Kitchen", "Food", "Hat", "Knives"]
+  },
+  {
+    "word": "Pilot",
+    "hints": ["Planes", "Sky", "Travel", "Captain"]
+  },
+  {
+    "word": "Detective",
+    "hints": ["Clues", "Mystery", "Magnifying Glass", "Solve"]
+  },
+  {
+    "word": "Firefighter",
+    "hints": ["Water", "Rescue", "Truck", "Siren"]
+  },
+  {
+    "word": "Astronaut",
+    "hints": ["Space", "Suit", "Rocket", "Gravity"]
+  },
+  {
+    "word": "Teacher",
+    "hints": ["School", "Board", "Students", "Homework"]
+  }
+]
