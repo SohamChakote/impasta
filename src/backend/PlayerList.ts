@@ -39,6 +39,11 @@ export class PlayerList {
       this.imposterIdx = randomIdx;
   }
 
+  getRandomPlayer(): Player {
+      let randomIdx = Math.floor(Math.random() * this.numPlayers);
+      return this.players[randomIdx];
+  }
+
   getPlayers(): Player[] {
       return this.players;
   }

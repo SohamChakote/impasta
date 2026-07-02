@@ -101,9 +101,11 @@ export default function PlayerTurnScreen() {
             setIsScratched(false);
         } else {
             const imposter = gameBackend.getImposter();
+            // Select a random player just before navigating and include their name in the params
+            const randomPlayer = gameBackend.getRandomPlayer();
             router.push({
                 pathname: '/screens/RevealScreen',
-                params: { imposterName: imposter }
+                params: { imposterName: imposter, randomPlayerName: randomPlayer.name }
             });
         }
     };

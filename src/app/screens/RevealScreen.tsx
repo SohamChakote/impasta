@@ -21,7 +21,7 @@ export default function RevealScreen() {
     const buttonOpacity = useRef(new Animated.Value(0)).current;
 
     // Catch the name passed from the Turn Screen
-    const { imposterName } = useLocalSearchParams();
+    const { imposterName, randomPlayerName } = useLocalSearchParams();
 
     // Theme setup - Strictly Light Mode for now per your request
     /* const colorScheme = useColorScheme();
@@ -95,15 +95,12 @@ export default function RevealScreen() {
                 {!isRevealed ? (
                     // PHASE 1: The Suspense
                     <>
-                        <Text style={[styles.drumrollText, { color: theme.text }]}>
-                            MOMENT OF TRUTH...
+                        <Text style={[styles.largeText, { color: theme.text }]}>
+                            {randomPlayerName ? randomPlayerName : 'PLAYER'}
                         </Text>
-                        <TouchableOpacity
-                            style={[styles.actionButton, { backgroundColor: theme.primaryButton }]}
-                            onPress={() => setIsRevealed(true)}
-                        >
-                            <Text style={[styles.buttonText, { color: theme.text }]}>REVEAL IMPOSTER</Text>
-                        </TouchableOpacity>
+                        <Text style={[styles.smallText, { color: theme.text }]}>
+                            STARTS THE GAME
+                        </Text>
                     </>
                 ) : (
                     // PHASE 2: The Reveal with Fade Animations
@@ -119,8 +116,17 @@ export default function RevealScreen() {
                 )}
             </View>
 
-            {/* The Main Menu button only fades in AFTER the name is revealed */}
-            {isRevealed && (
+            {/* BOTTOM BUTTONS EXPORTED OUT OF CENTER CONTENT */}
+            {!isRevealed ? (
+                // Reveal Button anchored to the bottom
+                <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: theme.primaryButton }]}
+                    onPress={() => setIsRevealed(true)}
+                >
+                    <Text style={[styles.buttonText, { color: theme.text }]}>REVEAL IMPOSTER</Text>
+                </TouchableOpacity>
+            ) : (
+                // Main Menu button only fades in AFTER the name is revealed
                 <Animated.View style={{ opacity: buttonOpacity }}>
                     <TouchableOpacity
                         style={[styles.mainMenuButton, { backgroundColor: theme.primaryButton }]}
@@ -157,19 +163,29 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 24,
-        justifyContent: 'space-between',
+        justifyContent: 'space-between', // Keeps content centered and buttons at the bottom
     },
     content: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    drumrollText: {
-        fontSize: 24,
-        fontWeight: '600',
-        marginBottom: 40,
+    // Added new text styles perfectly sized based on your reference
+    largeText: {
+        fontSize: 42,
+        fontWeight: '900',
         textTransform: 'uppercase',
         letterSpacing: 2,
+        textAlign: 'center'
+    },
+    smallText: {
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 5,
+        marginTop: 5,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        textAlign: 'center'
     },
     subText: {
         fontSize: 22,
@@ -188,6 +204,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 40,
         borderRadius: 999,
         alignItems: 'center',
+        marginBottom: 20, // Added to keep it consistently off the exact screen edge like mainMenuButton
         shadowColor: "#1E293B",
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.15,
